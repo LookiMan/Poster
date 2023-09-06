@@ -17,6 +17,7 @@ from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
 from .models import Record
+from .utils import cache_set
 
 
 class GalleryDocumentInline(TabularInline):
@@ -27,13 +28,6 @@ class GalleryDocumentInline(TabularInline):
         'file',
         'caption',
     )
-
-    def clean(self):
-        super().clean()
-
-        for form in self.forms:
-            data = form.cleaned_data
-            raise Exception(data)
 
 
 class GalleryPhotoInline(TabularInline):
@@ -145,38 +139,51 @@ class PostAdmin(ModelAdmin):
         'voice',
     )
 
-    service_fields = (
-        'messages',
-        'is_published',
-    )
-
     list_display = (
         'post_type',
         'is_published',
         'post_content',
         'created_at',
+        'updated_at',
     )
 
-    readonly_fields = ()
-
-    def get_fields(self, request, obj=None):
-        all_fields = ['audio', 'document', 'caption', 'message', 'photo', 'video', 'voice']
-        exclude_fields = {
-            PostTypeEnum.AUDIO: set(all_fields).difference(set(['audio', 'caption'])),
-            PostTypeEnum.DOCUMENT: set(all_fields).difference(set(['document', 'caption'])),
-            PostTypeEnum.GALLERY_DOCUMENTS: all_fields,
-            PostTypeEnum.GALLERY_PHOTOS: all_fields,
-            PostTypeEnum.TEXT: set(all_fields).difference(set(['message'])),
-            PostTypeEnum.PHOTO: set(all_fields).difference(set(['photo', 'caption'])),
-            PostTypeEnum.VIDEO: set(all_fields).difference(set(['video', 'caption'])),
-            PostTypeEnum.VOICE: set(all_fields).difference(set(['voice', 'caption'])),
+    def get_content_fields(self, request, obj=None):
+        fields = {
+            PostTypeEnum.AUDIO: ['audio', 'caption'],
+            PostTypeEnum.DOCUMENT: ['document', 'caption'],
+            PostTypeEnum.TEXT: ['message'],
+            PostTypeEnum.PHOTO: ['photo', 'caption'],
+            PostTypeEnum.VIDEO: ['video', 'caption'],
+            PostTypeEnum.VOICE: ['voice', 'caption'],
         }
+        return fields.get(obj and obj.post_type, [])
 
+    def get_after_content_fields(self, request, obj=None):
+        fields = []
+
+        if obj and obj.is_published:
+            fields.append('messages_links')
+
+        return fields
+
+    def get_before_content_fields(self, request, obj=None):
         if not obj:
-            self.exclude = (*self.dynamic_fields, *self.service_fields)
-        else:
-            self.exclude = (*exclude_fields.get(obj.post_type, []), *self.service_fields)
-        return super().get_fields(request, obj)
+            return ['post_type']
+        return [
+            'channels',
+            'is_published',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_fieldsets(self, request, obj=None):
+        return [
+            (None, {'fields': [
+                *self.get_before_content_fields(request, obj),
+                *self.get_content_fields(request, obj),
+                *self.get_after_content_fields(request, obj),
+            ]})
+        ]
 
     def get_inlines(self, request, obj=None):
         if obj and obj.post_type == PostTypeEnum.GALLERY_DOCUMENTS:
@@ -186,9 +193,25 @@ class PostAdmin(ModelAdmin):
         return self.inlines
 
     def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return (*self.readonly_fields, 'post_type', 'is_published', 'messages_links')
-        return self.readonly_fields
+        readonly_files = [
+            'is_published',
+            'created_at',
+            'updated_at',
+            'messages_links',
+        ]
+
+        if obj and obj.is_published:
+            readonly_files.extend([
+                'post_type',
+                'channels',
+                'audio',
+                'document',
+                'photo',
+                'video',
+                'voice',
+            ])
+
+        return (*self.readonly_fields, *readonly_files)
 
     def add_view(self, request, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -214,6 +237,12 @@ class PostAdmin(ModelAdmin):
             obj.is_published = True
         elif form.data.get('_save_and_unpublish'):
             obj.is_published = False
+        elif form.data.get('_save_and_edit'):
+            cache_set(
+                ['post', obj.pk, 'receiver'],
+                value='edited',
+                timeout=3600
+            )
         super().save_model(request, obj, form, change)
 
     def messages_links(self, obj):

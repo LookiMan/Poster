@@ -1,5 +1,5 @@
+from django.db.models import QuerySet
 from django.db.models.signals import pre_delete
-from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
@@ -11,6 +11,7 @@ from .tasks import delete_telegram_message
 from .tasks import edit_post
 from .tasks import publish_post
 from .tasks import unpublish_post
+from .utils import cache_pop
 from .utils import save_file
 
 from telegram import TelegramBot
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Bot)
-def bot_post_save(sender, instance, created, **kwargs):
+def bot_post_save(sender, instance: Bot, created: bool, **kwargs) -> None:
     if not created:
         return
 
@@ -40,7 +41,7 @@ def bot_post_save(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Channel)
-def channel_post_save(sender, instance, created, **kwargs):
+def channel_post_save(sender, instance: Channel, created: bool, **kwargs) -> None:
     if not created:
         return
 
@@ -57,54 +58,44 @@ def channel_post_save(sender, instance, created, **kwargs):
             file_id = info.photo.small_file_id
 
             instance.image.name = file_id
-            save_file(file_id, bot.download_file_from_telegram(file_id))
+            content = bot.download_file_from_telegram(file_id)
+            if content:
+                save_file(file_id, content)
 
     instance.save()
 
 
-@receiver(pre_save, sender=Post)
-def post_model_pre_save(sender, instance, **kwargs):
-    model = Post.objects.filter(pk=instance.pk).first()
-    if not model:
-        return
+def _edit_post(channels: QuerySet[Channel], instance: Post) -> None:
+    for channel in channels:
+        edit_post.delay(channel.pk, instance.pk)
 
-    channels = instance.channels.all()
-    if channels:
-        for channel in channels:
-            if model.message != instance.message or model.caption != instance.caption:
-                edit_post.delay(channel.id, instance.id)
-    else:
-        @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0001')
-        def related_models_changed(sender, instance, action, **kwargs):
-            if action == 'post_add':
-                for channel in channels:
-                    if model.message != instance.message or model.caption != instance.caption:
-                        edit_post.delay(channel.id, instance.id)
+
+def _publish_and_unpublish_post(channels: QuerySet[Channel], instance: Post) -> None:
+    for channel in channels:
+        if instance.is_published:
+            publish_post.delay(channel.pk, instance.pk)
+        else:
+            unpublish_post.delay(channel.pk, instance.pk)
 
 
 @receiver(post_save, sender=Post)
 def post_model_post_save(sender, instance, created, **kwargs):
+    info = cache_pop(['post', instance.pk, 'receiver'])
+
     channels = instance.channels.all()
     if channels:
-        if instance.is_published:
-            for channel in channels:
-                publish_post.delay(channel.id, instance.id)
+        if info and info == 'edited':
+            _edit_post(channels, instance)
         else:
-            for channel in channels:
-                unpublish_post.delay(channel.id, instance.id)
-
+            _publish_and_unpublish_post(channels, instance)
     else:
         @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0002')
         def related_models_changed(sender, instance, action, **kwargs):
             if action == 'post_add':
-                for channel in instance.channels.all():
-                    if instance.is_published:
-                        publish_post.delay(channel.id, instance.id)
-                    else:
-                        unpublish_post.delay(channel.id, instance.id)
+                _publish_and_unpublish_post(instance.channels.all(), instance)
 
 
 @receiver(pre_delete, sender=Post)
-def post_model_pre_delete(sender, instance, **kwargs):
+def post_model_pre_delete(sender, instance: Post, **kwargs) -> None:
     for message in instance.messages.all():
-        delete_telegram_message.delay(message.channel_id, message.id)
+        delete_telegram_message.delay(message.channel_id, message.pk)
