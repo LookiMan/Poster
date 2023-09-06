@@ -1,6 +1,7 @@
 {
     "include": [
         "./poster/sender.py",
+        "./poster/signals.py",
         "./poster/tasks.py",
         "./poster/utils.py",
         "./telegram/bot.py",
