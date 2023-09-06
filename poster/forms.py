@@ -78,39 +78,44 @@ class PostAdminForm(ModelForm):
 
         if self.instance.post_type == PostTypeEnum.AUDIO:
             audio = cleaned_data.get('audio')
-            if not audio:
+            if not (self.instance.audio or audio):
                 raise ValidationError(_('Audio file required'))
 
-            elif not mime.from_buffer(audio.read()).startswith('audio/'):
-                raise ValidationError(_('Select audio file'))
-            audio.seek(0)
+            if audio:
+                if not mime.from_buffer(audio.read()).startswith('audio/'):
+                    raise ValidationError(_('Select audio file'))
+                audio.seek(0)
 
-        elif self.instance.post_type == PostTypeEnum.DOCUMENT and not cleaned_data.get('document'):
-            raise ValidationError(_('Document file required'))
+        elif self.instance.post_type == PostTypeEnum.DOCUMENT:
+            if not (self.instance.document or cleaned_data.get('document')):
+                raise ValidationError(_('Document file required'))
 
         elif self.instance.post_type == PostTypeEnum.TEXT and not cleaned_data.get('message'):
             raise ValidationError(_('Text message required'))
 
-        elif self.instance.post_type == PostTypeEnum.PHOTO and not cleaned_data.get('photo'):
-            raise ValidationError(_('Photo file required'))
+        elif self.instance.post_type == PostTypeEnum.PHOTO:
+            if not (self.instance.photo or cleaned_data.get('photo')):
+                raise ValidationError(_('Photo file required'))
 
         elif self.instance.post_type == PostTypeEnum.VIDEO:
             video = cleaned_data.get('video')
-            if not video:
+            if not (self.instance.video or video):
                 raise ValidationError(_('Video file required'))
 
-            elif not mime.from_buffer(video.read()).startswith('video/'):
-                raise ValidationError(_('Select video file'))
-            video.seek(0)
+            if video:
+                if not mime.from_buffer(video.read()).startswith('video/'):
+                    raise ValidationError(_('Select video file'))
+                video.seek(0)
 
         elif self.instance.post_type == PostTypeEnum.VOICE:
             voice = cleaned_data.get('voice')
-            if not voice:
+            if not (self.instance.voice or voice):
                 raise ValidationError(_('Voice file required'))
 
-            elif not mime.from_buffer(voice.read()).startswith('audio/'):
-                raise ValidationError(_('Select audio file'))
-            voice.seek(0)
+            if voice:
+                if not mime.from_buffer(voice.read()).startswith('audio/'):
+                    raise ValidationError(_('Select audio file'))
+                voice.seek(0)
 
 
 class GalleryDocumentInlineForm(ModelForm):
