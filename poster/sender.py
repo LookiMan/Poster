@@ -64,8 +64,7 @@ class Sender:
 
     def _send_video(self, channel_id: int, video: str, *args, **kwargs) -> Message:
         with open(self._get_path(video), mode='rb') as file:
-            info = self.bot.send_video_note(channel_id, data=file)
-        return self.bot.send_video(channel_id, info.file_id, *args, **kwargs)
+            return self.bot.send_video_note(channel_id, data=file)
 
     def _send_voice(self, channel_id: int, voice: str, *args, **kwargs) -> Message:
         with open(self._get_path(voice), mode='rb') as file:

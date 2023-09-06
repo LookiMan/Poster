@@ -72,11 +72,8 @@ class TelegramBot:
     def send_media_group(self, chat_id: int, files: list, *args, **kwargs) -> List[Message]:
         return self.telebot.send_media_group(chat_id, files, *args, **kwargs)
 
-    def send_video(self, chat_id: int, video_id: str, *args, **kwargs) -> Message:
-        self.telebot.send_chat_action(chat_id, action=BotActionTypeEnum.UPLOAD_VIDEO)
-        return self.telebot.send_video(chat_id, video_id, *args, **kwargs)
-
     def send_video_note(self, chat_id: int, data: BufferedReader, *args, **kwargs) -> Message:
+        self.telebot.send_chat_action(chat_id, action=BotActionTypeEnum.UPLOAD_VIDEO)
         return self.telebot.send_video_note(chat_id, data, *args, **kwargs)
 
     def send_voice(self, chat_id: int, voice: BufferedReader, *args, **kwargs) -> Message:
