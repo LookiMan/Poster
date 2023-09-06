@@ -1,0 +1,11 @@
+{
+    "include": [
+        "./poster/sender.py",
+        "./poster/tasks.py",
+        "./poster/utils.py",
+        "./telegram/bot.py",
+    ],
+    "reportMissingTypeStubs": false,
+    "useLibraryCodeForTypes": false,
+    "strict": ["alwaysStrict"]
+}

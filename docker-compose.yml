@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    entrypoint: './bin/entrypoint.sh'
+    ports:
+      - '$PORT:$PORT'
+    volumes:
+      - .:$PROJECT_LOCATION
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      poster_network:
+        ipv4_address: $NETWORK_PREFIX.2
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks:
+      poster_network:
+        ipv4_address: $NETWORK_PREFIX.3
+
+  celery-beat:
+    build: .
+    command: celery -A config beat -l info
+    volumes:
+      - .:$PROJECT_LOCATION
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      poster_network:
+        ipv4_address: $NETWORK_PREFIX.4
+
+  celery-worker:
+    build: .
+    command: celery -A config worker -l info
+    volumes:
+      - .:$PROJECT_LOCATION
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      poster_network:
+        ipv4_address: $NETWORK_PREFIX.5
+
+  redis:
+    image: redis:alpine
+    networks:
+      poster_network:
+        ipv4_address: $NETWORK_PREFIX.6
+
+volumes:
+  db:
+    driver: local
+
+networks:
+  poster_network:
+    ipam:
+      config:
+        - subnet: $NETWORK_PREFIX.0/16

@@ -1,0 +1,169 @@
+from os import getenv
+from os import path
+from pathlib import Path
+
+from django.utils.translation import gettext_lazy as _
+
+
+try:
+    from .local_settings import * # NOQA
+except ImportError:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
+    SECRET_KEY = getenv('DJANGO_SECRET_KEY')
+
+    DEBUG = False
+
+    ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS').split(' ')
+
+    INSTALLED_APPS = [
+        'poster',
+        'jazzmin',
+        'froala_editor',
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+    ]
+
+    MIDDLEWARE = [
+        'django.middleware.security.SecurityMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.common.CommonMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    ]
+
+    ROOT_URLCONF = 'config.urls'
+
+    TEMPLATES = [
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'DIRS': [],
+            'APP_DIRS': True,
+            'OPTIONS': {
+                'context_processors': [
+                    'django.template.context_processors.debug',
+                    'django.template.context_processors.request',
+                    'django.contrib.auth.context_processors.auth',
+                    'django.contrib.messages.context_processors.messages',
+                ],
+            },
+        },
+    ]
+
+    WSGI_APPLICATION = 'config.wsgi.application'
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': getenv('DB_NAME'),
+            'USER': getenv('DB_USER'),
+            'PASSWORD': getenv('DB_PASSWORD'),
+            'HOST': getenv('DB_HOST'),
+            'PORT': int(getenv('DB_PORT')),
+        }
+    }
+
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+    ]
+
+    LANGUAGE_CODE = 'en'
+
+    TIME_ZONE = 'UTC'
+
+    USE_I18N = True
+
+    USE_L10N = True
+
+    USE_TZ = True
+
+    STATIC_URL = '/static/'
+
+    MEDIA_URL = '/media/'
+
+    MEDIA_ROOT = path.join(BASE_DIR, 'media')
+
+    LOCALE_PATHS = (path.join(BASE_DIR, 'locale'),)
+
+    LANGUAGES = (
+        ('uk', _('Ukrainian')),
+        ('en', _('English')),
+    )
+
+    LANGUAGE_COOKIE_NAME = 'lang'
+
+    DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.FileHandler',
+                'filename': './logs/django.log',
+            },
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+        },
+    }
+
+    REDIS_URI = getenv('REDIS_URI')
+
+    if not REDIS_URI:
+        raise Exception('REDIS_URI not found in OS environment')
+
+    # Celery
+    CELERY_BROKER_URL = f'{REDIS_URI}/0'
+    CELERY_RESULT_BACKEND = f'{REDIS_URI}/0'
+
+    JAZZMIN_SETTINGS = {
+        'navigation_expanded': False,
+        'language_chooser': True,
+    }
+
+    JAZZMIN_UI_TWEAKS = {
+        'navbar_small_text': True,
+        'footer_small_text': True,
+        'body_small_text': True,
+        'sidebar_nav_flat_style': True,
+    }
+
+    FROALA_EDITOR_OPTIONS = {
+        'theme': 'gray',
+        'toolbarButtons': [
+            'undo',
+            'redo',
+            'bold',
+            'italic',
+            'underline',
+            'insertLink',
+        ],
+        'pluginsEnabled': [
+            'link',
+            'charCounter',
+            'lists',
+        ]
+    }

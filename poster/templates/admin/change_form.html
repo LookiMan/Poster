@@ -1,0 +1,24 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+    {% if show_save_and_publish %}
+        <div class="form-group">
+            <input type="submit" value="{% trans 'Save and publish' %}" class="btn btn-warning form-control" name="_save_and_publish">
+        </div>
+    {% endif %}
+
+    {% if show_save_and_unpublish %}
+        <div class="form-group">
+            <input type="submit" value="{% trans 'Save and unpublish' %}" class="btn btn-info form-control" name="_save_and_unpublish">
+        </div>
+    {% endif %}
+
+    {% if show_save_and_edit %}
+        <div class="form-group">
+            <input type="submit" value="{% trans 'Save and edit' %}" class="btn btn-success form-control" name="_save">
+        </div>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

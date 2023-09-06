@@ -1,0 +1,63 @@
+.git
+.vscode
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# Nodejs
+node_modules/
+package-lock.json
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Other
+db.sqlite3
+*.sqlite3
+*.log
+*.pot
+*.po
+*.mo
+*.bak
+*.swp
+*.db
+*.sqlite3-journal
+*.bak
+*.svg
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.pdf
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.psd
+*.ai
+*.eps
+node_modules
+static
+
+media/*
+!media/default/

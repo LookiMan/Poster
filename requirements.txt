@@ -1,0 +1,23 @@
+# Dashboard
+django==4.2.4
+django-jazzmin==2.6.0
+pillow==10.0.0
+django-froala-editor==4.1.1
+
+# Database
+psycopg2==2.9.7
+
+# Celery
+redis==4.6.0
+django-celery-beat==2.5.0
+
+# Telegram
+pyTelegramBotAPI==4.12.0
+
+# Other
+pyright==1.1.325
+python-magic==0.4.27
+flake8==6.1.0 
+
+# Stubs
+django-stubs==4.2.3
