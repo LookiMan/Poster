@@ -17,4 +17,3 @@ class RecordTypeEnum(TextChoices):
     CREATE = 'create', _('CREATE')
     UPDATE = 'update', _('UPDATE')
     DELETE = 'delete', _('DELETE')
-    UNKNOWN = 'unknown', _('UNKNOWN')
