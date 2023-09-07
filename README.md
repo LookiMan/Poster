@@ -60,3 +60,7 @@
 **Validate-python:**
 
 `docker compose exec app sh -c ./bin/validate-python.sh`
+
+**Run tests:**
+
+`docker compose exec app python manage.py test`

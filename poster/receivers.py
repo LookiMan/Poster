@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Bot)
-def bot_post_save(sender, instance: Bot, created: bool, **kwargs) -> None:
+def bot_post_save(sender: Bot, instance: Bot, created: bool, **kwargs) -> None:
     if not created:
         return
 
@@ -43,7 +43,7 @@ def bot_post_save(sender, instance: Bot, created: bool, **kwargs) -> None:
 
 
 @receiver(post_save, sender=Channel)
-def channel_post_save(sender, instance: Channel, created: bool, **kwargs) -> None:
+def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwargs) -> None:
     if not created:
         return
 
@@ -68,7 +68,7 @@ def channel_post_save(sender, instance: Channel, created: bool, **kwargs) -> Non
 
 
 @receiver(pre_delete, sender=Post)
-def post_model_pre_delete(sender, instance: Post, **kwargs) -> None:
+def post_model_pre_delete(sender: Post, instance: Post, **kwargs) -> None:
     for message in instance.messages.all():
         delete_telegram_message.delay(message.channel_id, message.pk)
 
