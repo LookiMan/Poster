@@ -17,7 +17,9 @@ from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
 from .models import Record
-from .utils import cache_set
+from .signals import edit_post_signal
+from .signals import publish_post_signal
+from .signals import unpublish_post_signal
 
 
 class GalleryDocumentInline(TabularInline):
@@ -224,14 +226,15 @@ class PostAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         if form.data.get('_save_and_publish'):
             obj.is_published = True
+            publish_post_signal.send(sender=request, instance=obj)
+        elif form.data.get('_save_and_publish_silently'):
+            obj.is_published = True
+            publish_post_signal.send(sender=request, instance=obj, disable_notification=True)
         elif form.data.get('_save_and_unpublish'):
             obj.is_published = False
+            unpublish_post_signal.send(sender=request, instance=obj)
         elif form.data.get('_save_and_edit'):
-            cache_set(
-                ['post', obj.pk, 'receiver'],
-                value='edited',
-                timeout=3600
-            )
+            edit_post_signal.send(sender=request, instance=obj)
         super().save_model(request, obj, form, change)
 
     def messages_links(self, obj):

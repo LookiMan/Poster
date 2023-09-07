@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(name='poster.tasks.publish_post', bind=True)
-def publish_post(self, channel_pk: int, post_pk: int) -> None:
+def publish_post(self, channel_pk: int, post_pk: int, *, disable_notification: bool) -> None:
     channel = Channel.objects.filter(pk=channel_pk).first()
     post = Post.objects.filter(pk=post_pk).first()
 
@@ -36,7 +36,7 @@ def publish_post(self, channel_pk: int, post_pk: int) -> None:
 
     try:
         sender = Sender(TelegramBot(channel.bot.token))
-        response = sender.send_post(channel, post, parse_mode='HTML')
+        response = sender.send_post(channel, post, disable_notification=disable_notification, parse_mode='HTML')
     except Exception as e:
         logger.exception(e)
         record.exception = e
