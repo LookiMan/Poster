@@ -7,6 +7,8 @@ from unittest.mock import patch
 from ..models import Bot
 
 
+BOT_TOKEN = '01234567890:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+
 bot_info = User.de_json({
     'id': 1234567890,
     'is_bot': True,
@@ -25,13 +27,14 @@ bot_info = User.de_json({
 class BotModelTest(TestCase):
     @patch('telegram.bot.TelegramBot.get_me', return_value=bot_info)
     def setUp(self, mocked):
-        self.bot = Bot.objects.create(token='01234567890:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        self.bot = Bot.objects.create(token=BOT_TOKEN)
 
     def test_creating_bot_without_token(self):
         with self.assertRaises(IntegrityError):
             Bot.objects.create(token=None)
 
     def test_bot_info(self):
+        self.assertEqual(self.bot.token, BOT_TOKEN)
         self.assertEqual(self.bot.bot_id, bot_info.id)
         self.assertEqual(self.bot.first_name, bot_info.first_name)
         self.assertEqual(self.bot.last_name, bot_info.last_name)
