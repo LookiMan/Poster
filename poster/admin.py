@@ -128,17 +128,6 @@ class PostAdmin(ModelAdmin):
     model = Post
     form = PostAdminForm
 
-    dynamic_fields = (
-        'audio',
-        'caption',
-        'channels',
-        'document',
-        'message',
-        'photo',
-        'video',
-        'voice',
-    )
-
     list_display = (
         'post_type',
         'is_published',
