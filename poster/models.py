@@ -126,7 +126,7 @@ class Channel(BaseMixin):
         return f'Telegram channel: {self.title}'
 
     class Meta:
-        ordering = ['-pk']
+        ordering = ['-created_at']
 
         verbose_name = _('Channel')
         verbose_name_plural = _('Channels')

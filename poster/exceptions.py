@@ -1,0 +1,4 @@
+
+
+class BotNotSetException(Exception):
+    pass

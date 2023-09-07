@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
+from .exceptions import BotNotSetException
 from .models import Bot
 from .models import Channel
 from .models import Post
@@ -46,6 +47,9 @@ def bot_post_save(sender: Bot, instance: Bot, created: bool, **kwargs) -> None:
 def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwargs) -> None:
     if not created:
         return
+
+    if not instance.bot:
+        raise BotNotSetException(f'Bot not set from channel with id {instance.pk}')
 
     bot = TelegramBot(instance.bot.token)
     info = bot.get_channel_info(instance.channel_id)
