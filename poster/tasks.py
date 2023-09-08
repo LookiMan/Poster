@@ -36,7 +36,12 @@ def publish_post(self, channel_pk: int, post_pk: int, *, disable_notification: b
 
     try:
         sender = Sender(TelegramBot(channel.bot.token))
-        response = sender.send_post(channel, post, disable_notification=disable_notification, parse_mode='HTML')
+        response = sender.send_post(
+            channel,
+            post,
+            disable_notification=disable_notification,
+            parse_mode='MarkdownV2'
+        )
     except Exception as e:
         logger.exception(e)
         record.exception = e
@@ -114,7 +119,11 @@ def edit_post(self, channel_pk: int, post_pk: int) -> None:
 
     try:
         sender = Sender(TelegramBot(channel.bot.token))
-        record.response = sender.edit_post(channel, post, parse_mode='HTML')
+        record.response = sender.edit_post(
+            channel,
+            post,
+            parse_mode='MarkdownV2'
+        )
     except Exception as e:
         logger.exception(e)
         record.exception = e

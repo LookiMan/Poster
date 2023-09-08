@@ -13,7 +13,7 @@ from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
-from .utils import clean_message
+from .utils import prepare_message
 
 from telegram import TelegramBot
 
@@ -81,7 +81,7 @@ class Sender:
                     self.bot.edit_message_text(
                         channel.channel_id,
                         message.message_id,
-                        text=clean_message(post.message),
+                        text=prepare_message(post.message),
                         **kwargs,
                     )
                 )
@@ -90,7 +90,7 @@ class Sender:
                     self.bot.edit_message_caption(
                         channel.channel_id,
                         message.message_id,
-                        caption=clean_message(post.caption),
+                        caption=prepare_message(post.caption),
                         **kwargs,
                     )
                 )
@@ -101,14 +101,14 @@ class Sender:
             return self._send_audio(
                 channel.channel_id,
                 post.audio,
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.document:
             return self._send_document(
                 channel.channel_id,
                 post.document,
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.gallery_documents:
@@ -123,34 +123,34 @@ class Sender:
             return self._send_gallery_photos(
                 channel.channel_id,
                 post.gallery_photos.all(),
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.message:
             return self._send_message(
                 channel.channel_id,
-                clean_message(post.message),
+                prepare_message(post.message),
                 **kwargs
             )
         elif post.photo:
             return self._send_photo(
                 channel.channel_id,
                 post.photo,
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.video:
             return self._send_video(
                 channel.channel_id,
                 post.video,
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.voice:
             return self._send_voice(
                 channel.channel_id,
                 post.voice,
-                caption=clean_message(post.caption),
+                caption=prepare_message(post.caption),
                 **kwargs
             )
         else:

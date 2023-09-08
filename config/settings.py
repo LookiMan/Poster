@@ -159,6 +159,9 @@ except ImportError:
             'bold',
             'italic',
             'underline',
+            'strikeThrough',
+            'formatOL',
+            'formatUL',
             'insertLink',
         ],
         'pluginsEnabled': [
