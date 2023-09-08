@@ -89,22 +89,14 @@ def publish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -
         @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0001')
         def related_models_changed(sender, instance, action, **kwargs):
             if action == 'post_add':
-                for channel in channels:
+                for channel in instance.channels.all():
                     publish_post.delay(channel.pk, instance.pk, disable_notification=disable_notification)
 
 
 @receiver(unpublish_post_signal)
 def unpublish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
-    channels = instance.channels.all()
-    if channels:
-        for channel in channels:
-            unpublish_post.delay(channel.pk, instance.pk)
-    else:
-        @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0002')
-        def related_models_changed(sender, instance, action, **kwargs):
-            if action == 'post_add':
-                for channel in channels:
-                    unpublish_post.delay(channel.pk, instance.pk)
+    for channel in instance.channels.all():
+        unpublish_post.delay(channel.pk, instance.pk)
 
 
 @receiver(edit_post_signal)
