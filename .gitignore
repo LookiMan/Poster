@@ -1,5 +1,6 @@
 .vscode
-media
+media/*
+!media/default/
 
 
 # Nodejs

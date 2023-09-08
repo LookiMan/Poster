@@ -1,7 +1,11 @@
 from django.db.models import DateTimeField
+from django.db.models import ImageField
 from django.db.models import ManyToManyField
 from django.db.models import Model
 from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
+
+from .utils import get_default_telegram_image
 
 
 class BaseMixin(Model):
@@ -29,3 +33,32 @@ class ChannelsMixin(Model):
 
     class Meta:
         abstract = True
+
+
+class ImageMixin(Model):
+    image = ImageField(
+        null=True,
+        blank=True,
+        verbose_name=_('Image'),
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.image:
+            self.image.name = get_default_telegram_image()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+
+
+class AdminImageMixin:
+    def preview_image(self, obj):
+        if obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" width="75" style="border-radius: 50%;">')
+        else:
+            return _('[Image not set]')
+
+    preview_image.short_description = _('Image')
+
+    def get_list_display(self, request):
+        return (*super().get_list_display(request), 'preview_image')

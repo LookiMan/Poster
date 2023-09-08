@@ -19,9 +19,10 @@ from .enums import PostTypeEnum
 from .enums import RecordTypeEnum
 from .mixins import BaseMixin
 from .mixins import ChannelsMixin
+from .mixins import ImageMixin
 
 
-class Bot(BaseMixin):
+class Bot(BaseMixin, ImageMixin):
     bot_id = BigIntegerField(
         null=True,
         blank=True,
@@ -73,7 +74,7 @@ class Bot(BaseMixin):
         verbose_name_plural = _('Bots')
 
 
-class Channel(BaseMixin):
+class Channel(BaseMixin, ImageMixin):
     bot = ForeignKey(
         'Bot',
         null=True,
@@ -114,12 +115,6 @@ class Channel(BaseMixin):
         blank=True,
         verbose_name=_('Telegram channel invite link'),
         help_text=_(''),
-    )
-
-    image = ImageField(
-        null=True,
-        blank=True,
-        verbose_name=_('Channel image'),
     )
 
     def __str__(self):

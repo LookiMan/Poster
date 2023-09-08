@@ -11,6 +11,7 @@ from .forms import GalleryPhotoInlineForm
 from .forms import PostAdminForm
 from .enums import PostTypeEnum
 from .enums import RecordTypeEnum
+from .mixins import AdminImageMixin
 from .models import Bot
 from .models import Channel
 from .models import GalleryDocument
@@ -43,7 +44,7 @@ class GalleryPhotoInline(TabularInline):
 
 
 @register(Bot)
-class BotAdmin(ModelAdmin):
+class BotAdmin(AdminImageMixin, ModelAdmin):
     model = Bot
     form = BotAdminForm
 
@@ -57,7 +58,7 @@ class BotAdmin(ModelAdmin):
 
     def get_fields(self, request, obj=None):
         if not obj:
-            self.exclude = self.list_display
+            self.exclude = (*self.list_display, 'image')
         return super().get_fields(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
@@ -80,7 +81,7 @@ class BotAdmin(ModelAdmin):
 
 
 @register(Channel)
-class ChannelAdmin(ModelAdmin):
+class ChannelAdmin(AdminImageMixin, ModelAdmin):
     model = Channel
     form = ChannelAdminForm
 
@@ -89,7 +90,6 @@ class ChannelAdmin(ModelAdmin):
         'username',
         'description',
         'invite_link',
-        'preview_image',
     )
 
     def get_fields(self, request, obj=None):
@@ -103,14 +103,6 @@ class ChannelAdmin(ModelAdmin):
         if obj:
             return (*self.readonly_fields, *self.list_display, 'channel_id')
         return self.readonly_fields
-
-    def preview_image(self, obj):
-        if obj.image:
-            return mark_safe(f'<img src="{obj.image.url}" width="75">')
-        else:
-            return _('[Image not set]')
-
-    preview_image.short_description = _('Channel image')
 
     def add_view(self, request, form_url='', extra_context=None):
         extra_context = extra_context or {}

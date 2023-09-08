@@ -28,3 +28,7 @@ def prepare_message(message: str) -> str:
     message = message.replace('.', '\\.')
     message = message.replace('-', '\\-')
     return message
+
+
+def get_default_telegram_image():
+    return path.join('default', 'telegram_icon.jpg')
