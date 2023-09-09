@@ -10,14 +10,14 @@ from .forms import GalleryDocumentInlineForm
 from .forms import GalleryPhotoInlineForm
 from .forms import PostAdminForm
 from .enums import PostTypeEnum
-from .enums import RecordTypeEnum
+from .enums import TaskTypeEnum
 from .mixins import AdminImageMixin
 from .models import Bot
 from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
-from .models import Record
+from .models import Task
 from .signals import edit_post_signal
 from .signals import publish_post_signal
 from .signals import unpublish_post_signal
@@ -269,9 +269,9 @@ class PostAdmin(ModelAdmin):
     post_content.short_description = _('Post content')
 
 
-@register(Record)
-class RecordAdmin(ModelAdmin):
-    model = Record
+@register(Task)
+class TaskAdmin(ModelAdmin):
+    model = Task
 
     list_display = (
         'task_id',
@@ -288,12 +288,12 @@ class RecordAdmin(ModelAdmin):
 
     def action_type(self, obj):
         color = {
-            RecordTypeEnum.CREATE: 'text-green',
-            RecordTypeEnum.UPDATE: 'text-info',
-            RecordTypeEnum.DELETE: 'text-warning',
+            TaskTypeEnum.CREATE: 'text-green',
+            TaskTypeEnum.UPDATE: 'text-info',
+            TaskTypeEnum.DELETE: 'text-warning',
         }
         return mark_safe(
-            f'<strong class="{color.get(obj.record_type, "text-danger")}">{obj.get_record_type_display() or _("UNKNOWN")}</strong>' # NOQA
+            f'<strong class="{color.get(obj.task_type, "text-danger")}">{obj.get_task_type_display() or _("UNKNOWN")}</strong>' # NOQA
         )
 
     action_status.short_description = _('Action status')

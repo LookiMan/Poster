@@ -13,7 +13,7 @@ class PostTypeEnum(TextChoices):
     VOICE = 'voice', _('Voice message')
 
 
-class RecordTypeEnum(TextChoices):
+class TaskTypeEnum(TextChoices):
     CREATE = 'create', _('CREATE')
     UPDATE = 'update', _('UPDATE')
     DELETE = 'delete', _('DELETE')

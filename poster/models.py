@@ -16,7 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from froala_editor.fields import FroalaField
 
 from .enums import PostTypeEnum
-from .enums import RecordTypeEnum
+from .enums import TaskTypeEnum
 from .mixins import BaseMixin
 from .mixins import ChannelsMixin
 from .mixins import ImageMixin
@@ -255,7 +255,7 @@ class Post(BaseMixin, ChannelsMixin):
         return f'{self.post_type} post with id {self.id}'
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-updated_at']
 
         verbose_name = _('Post')
         verbose_name_plural = _('Posts')
@@ -279,7 +279,7 @@ class PostMessage(BaseMixin):
         return f'Channel message id: {self.message_id}'
 
 
-class Record(BaseMixin):
+class Task(BaseMixin):
 
     created_at = DateTimeField(
         verbose_name=_('Date of creation'),
@@ -288,7 +288,6 @@ class Record(BaseMixin):
     )
 
     task_id = UUIDField(
-        unique=False,
         verbose_name=_('Celery task id'),
     )
 
@@ -299,11 +298,11 @@ class Record(BaseMixin):
         verbose_name=_('Channel'),
     )
 
-    record_type = CharField(
+    task_type = CharField(
         null=True,
         max_length=32,
-        choices=RecordTypeEnum.choices,
-        verbose_name=_('Record type'),
+        choices=TaskTypeEnum.choices,
+        verbose_name=_('Task type'),
         help_text=_('Type of action at which the record was created'),
     )
 
@@ -333,5 +332,5 @@ class Record(BaseMixin):
     class Meta:
         ordering = ['-created_at']
 
-        verbose_name = _('Record')
-        verbose_name_plural = _('Records')
+        verbose_name = _('Task')
+        verbose_name_plural = _('Tasks')

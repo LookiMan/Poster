@@ -9,6 +9,7 @@ from telebot.types import Message
 from telebot.types import InputMediaDocument
 from telebot.types import InputMediaPhoto
 
+from .exceptions import UnknownPostType
 from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
@@ -164,5 +165,4 @@ class Sender:
                 caption=prepare_message(post.caption),
                 **kwargs
             )
-        else:
-            raise Exception('Unknown post type given')
+        raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')

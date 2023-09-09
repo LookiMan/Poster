@@ -1,9 +1,9 @@
-from .enums import RecordTypeEnum
+from .enums import TaskTypeEnum
 from .models import Channel
 from .models import Post
 from .models import PostMessage
-from .models import Record
 from .sender import Sender
+from .models import Task
 from config.celery import app
 
 from telegram import TelegramBot
@@ -27,8 +27,8 @@ def publish_post(self, channel_pk: int, post_pk: int, *, disable_notification: b
     if not (channel and post and channel.bot):
         return
 
-    record = Record(
-        record_type=RecordTypeEnum.CREATE,
+    task = Task(
+        task_type=TaskTypeEnum.CREATE,
         channel_id=channel.pk,
         task_id=self.request.id,
         post_id=post.pk,
@@ -44,9 +44,9 @@ def publish_post(self, channel_pk: int, post_pk: int, *, disable_notification: b
         )
     except Exception as e:
         logger.exception(e)
-        record.exception = e
+        task.exception = e
     else:
-        record.response = response
+        task.response = response
         response_messages = response if isinstance(response, list) else [response]
         for response_message in response_messages:
             message = PostMessage(
@@ -60,7 +60,7 @@ def publish_post(self, channel_pk: int, post_pk: int, *, disable_notification: b
             if post:
                 post.messages.add(message)
 
-    record.save()
+    task.save()
 
 
 @app.task(name='poster.tasks.unpublish_post', bind=True)
@@ -79,21 +79,21 @@ def unpublish_post(self, channel_pk: int, post_pk: int) -> None:
         return
 
     for message in post.messages.all():
-        record = Record(
-            record_type=RecordTypeEnum.DELETE,
+        task = Task(
+            task_type=TaskTypeEnum.DELETE,
             channel_id=channel.pk,
             task_id=self.request.id,
         )
 
         try:
             sender = Sender(TelegramBot(channel.bot.token))
-            record.response = sender.delete_post(channel.channel_id, message.message_id)
+            task.response = sender.delete_post(channel.channel_id, message.message_id)
         except Exception as e:
             logger.exception(e)
-            record.exception = e
+            task.exception = e
         message.delete()
 
-        record.save()
+        task.save()
 
 
 @app.task(name='poster.tasks.edit_post', bind=True)
@@ -111,24 +111,24 @@ def edit_post(self, channel_pk: int, post_pk: int) -> None:
     if not (channel and post and channel.bot):
         return
 
-    record = Record(
-        record_type=RecordTypeEnum.UPDATE,
+    task = Task(
+        task_type=TaskTypeEnum.UPDATE,
         channel_id=channel.pk,
         task_id=self.request.id,
     )
 
     try:
         sender = Sender(TelegramBot(channel.bot.token))
-        record.response = sender.edit_post(
+        task.response = sender.edit_post(
             channel,
             post,
             parse_mode='MarkdownV2'
         )
     except Exception as e:
         logger.exception(e)
-        record.exception = e
+        task.exception = e
 
-    record.save()
+    task.save()
 
 
 @app.task(name='poster.tasks.delete_telegram_message', bind=True)
@@ -146,17 +146,17 @@ def delete_telegram_message(self, channel_pk: int, message_pk: int) -> None:
     if not (channel and message and channel.bot):
         return
 
-    record = Record(
-        record_type=RecordTypeEnum.DELETE,
+    task = Task(
+        task_type=TaskTypeEnum.DELETE,
         channel_id=channel.pk,
         task_id=self.request.id,
     )
 
     try:
         sender = Sender(TelegramBot(channel.bot.token))
-        record.response = sender.delete_post(channel.channel_id, message.message_id)
+        task.response = sender.delete_post(channel.channel_id, message.message_id)
     except Exception as e:
         logger.exception(e)
-        record.exception = e
+        task.exception = e
     message.delete()
-    record.save()
+    task.save()
