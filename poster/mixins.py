@@ -62,3 +62,11 @@ class AdminImageMixin:
 
     def get_list_display(self, request):
         return (*super().get_list_display(request), 'preview_image')
+
+
+class MediaGalleryMixin:
+    class Media:
+        js = (
+            'assets/vendor/js/jquery-3.7.0.min.js',
+            'assets/js/admin/gallery.js',
+        )

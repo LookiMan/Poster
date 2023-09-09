@@ -45,14 +45,26 @@ class Sender:
         files = []
         for document in documents:
             with open(self._get_path(document.file), mode='rb') as file:
-                files.append(InputMediaDocument(BytesIO(file.read()), caption=document.caption))
+                files.append(
+                    InputMediaDocument(
+                        BytesIO(file.read()),
+                        caption=prepare_message(document.caption),
+                        parse_mode='MarkdownV2',
+                    )
+                )
         return self._send_media_group(channel_id, files, *args, **kwargs)
 
     def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> List[Message]: # NOQA
         files = []
         for photo in photos:
             with open(self._get_path(photo.file), mode='rb') as file:
-                files.append(InputMediaPhoto(BytesIO(file.read()), caption=photo.caption))
+                files.append(
+                    InputMediaPhoto(
+                        BytesIO(file.read()),
+                        caption=prepare_message(photo.caption),
+                        parse_mode='MarkdownV2',
+                    )
+                )
         return self._send_media_group(channel_id, files, *args, **kwargs)
 
     def _send_message(self, channel_id: int, message: str, *args, **kwargs) -> Message:
@@ -123,7 +135,6 @@ class Sender:
             return self._send_gallery_photos(
                 channel.channel_id,
                 post.gallery_photos.all(),
-                caption=prepare_message(post.caption),
                 **kwargs
             )
         elif post.message:

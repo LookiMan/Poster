@@ -1,7 +1,9 @@
+from json import dumps
 from magic import Magic
 
+from django.conf import settings
 from django.forms import CharField
-from django.forms import Textarea
+from django.forms import HiddenInput
 from django.forms import ModelForm
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -11,6 +13,7 @@ from froala_editor.widgets import FroalaEditor
 from telebot.apihelper import ApiTelegramException
 
 from .enums import PostTypeEnum
+from .mixins import MediaGalleryMixin
 from .models import Bot
 from .models import Channel
 from .models import GalleryDocument
@@ -18,6 +21,15 @@ from .models import GalleryPhoto
 from .models import Post
 
 from telegram import TelegramBot
+
+
+class InlineFroalaEditor(FroalaEditor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.options.update({
+            'toolbarInline': True,
+            'charCounterCount': False,
+        })
 
 
 class BotAdminForm(ModelForm):
@@ -118,25 +130,31 @@ class PostAdminForm(ModelForm):
                 voice.seek(0)
 
 
-class GalleryDocumentInlineForm(ModelForm):
+class BaseGalleryInlineForm(ModelForm, MediaGalleryMixin):
+    froala_editor_options = CharField(widget=HiddenInput, initial=dumps(settings.FROALA_EDITOR_OPTIONS))
+
+
+class GalleryDocumentInlineForm(BaseGalleryInlineForm):
+
     class Meta:
         model = GalleryDocument
         fields = '__all__'
 
     caption = CharField(
-        widget=Textarea(attrs={'rows': 1, 'cols': 80}),
+        widget=InlineFroalaEditor(attrs={'rows': 1, 'cols': 80}),
         label=_('Document caption'),
         help_text=_('Description that will be displayed under this file'),
     )
 
 
-class GalleryPhotoInlineForm(ModelForm):
+class GalleryPhotoInlineForm(BaseGalleryInlineForm):
+
     class Meta:
         model = GalleryPhoto
         fields = '__all__'
 
     caption = CharField(
-        widget=Textarea(attrs={'class': 'form-control', 'rows': 1, 'cols': 80}),
+        widget=InlineFroalaEditor(attrs={'class': 'form-control', 'rows': 1, 'cols': 80}),
         label=_('Photo caption'),
         help_text=_('Description that will be displayed under this photo'),
     )

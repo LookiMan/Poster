@@ -27,20 +27,12 @@ class GalleryDocumentInline(TabularInline):
     model = GalleryDocument
     extra = 1
     form = GalleryDocumentInlineForm
-    fields = (
-        'file',
-        'caption',
-    )
 
 
 class GalleryPhotoInline(TabularInline):
     model = GalleryPhoto
     extra = 1
     form = GalleryPhotoInlineForm
-    fields = (
-        'file',
-        'caption',
-    )
 
 
 @register(Bot)
@@ -205,14 +197,15 @@ class PostAdmin(ModelAdmin):
         return super().add_view(request, form_url, extra_context=extra_context)
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        extra_context = extra_context or {}
         model = self.get_object(request, object_id)
+        extra_context = extra_context or {}
         extra_context['show_save'] = False
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
         extra_context['show_save_and_publish'] = not model.is_published
         extra_context['show_save_and_unpublish'] = model.is_published
         extra_context['show_save_and_edit'] = model.is_published
+        extra_context['disable_save_and_edit_button'] = model.is_media_gallery
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
