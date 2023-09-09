@@ -9,9 +9,11 @@ from .utils import BOT_INFO
 from .utils import CHANNEL_ID
 from .utils import CHANNEL_INFO
 
+from ..enums import PostTypeEnum
 from ..exceptions import BotNotSetException
 from ..models import Bot
 from ..models import Channel
+from ..models import Post
 
 
 class BotModelTest(TestCase):
@@ -83,3 +85,42 @@ class ChannelModelTest(TestCase):
 
     def test_ordering(self):
         self.assertEqual(Channel._meta.ordering, ['-created_at'])
+
+
+class PostModelTest(TestCase):
+    def test_creating_post_without_required_field_post_type(self):
+        with self.assertRaises(IntegrityError):
+            Post.objects.create(post_type=None)
+
+    def test_creating_post_empty(self):
+        post = Post.objects.create(post_type=PostTypeEnum.TEXT)
+
+        self.assertIsNone(post.document.name)
+        self.assertIsNone(post.caption)
+        self.assertListEqual(list(post.gallery_documents.all()), [])
+        self.assertListEqual(list(post.gallery_photos.all()), [])
+        self.assertIsNone(post.message)
+        self.assertIsNone(post.photo.name)
+        self.assertIsNone(post.video.name)
+        self.assertIsNone(post.voice.name)
+
+    def test_is_media_gallery(self):
+        post = Post.objects.create(post_type=PostTypeEnum.TEXT)
+        self.assertFalse(post.is_media_gallery)
+
+        post = Post.objects.create(post_type=PostTypeEnum.GALLERY_DOCUMENTS)
+        self.assertTrue(post.is_media_gallery)
+
+        post = Post.objects.create(post_type=PostTypeEnum.GALLERY_PHOTOS)
+        self.assertTrue(post.is_media_gallery)
+
+    def test_str_method(self):
+        post = Post.objects.create(post_type=PostTypeEnum.TEXT)
+        self.assertEqual(str(post), f'{post.post_type} post with id {post.id}')
+
+    def test_verbose_name(self):
+        self.assertEqual(Post._meta.verbose_name, _('Post'))
+        self.assertEqual(Post._meta.verbose_name_plural, _('Posts'))
+
+    def test_ordering(self):
+        self.assertEqual(Post._meta.ordering, ['-updated_at'])
