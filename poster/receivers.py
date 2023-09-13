@@ -11,13 +11,13 @@ from .models import Post
 from .signals import publish_post_signal
 from .signals import unpublish_post_signal
 from .signals import edit_post_signal
-from .tasks import delete_telegram_message
-from .tasks import edit_post
-from .tasks import publish_post
-from .tasks import unpublish_post
+from .tasks import delete_message_task
+from .tasks import delete_post_task
+from .tasks import edit_post_task
+from .tasks import send_post_task
 from .utils import save_file
 
-from telegram import TelegramBot
+from telegram_bot import TelegramBot
 
 import logging
 logger = logging.getLogger(__name__)
@@ -74,32 +74,27 @@ def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwarg
 @receiver(pre_delete, sender=Post)
 def post_model_pre_delete(sender: Post, instance: Post, **kwargs) -> None:
     for message in instance.messages.all():
-        delete_telegram_message.delay(message.channel_id, message.pk)
+        delete_message_task.delay(message.pk)
 
 
 @receiver(publish_post_signal)
 def publish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
     disable_notification = kwargs.get('disable_notification', False)
 
-    channels = instance.channels.all()
-    if channels:
-        for channel in channels:
-            publish_post.delay(channel.pk, instance.pk, disable_notification=disable_notification)
+    if instance.channels.all():
+        send_post_task.delay(instance.pk, disable_notification=disable_notification)
     else:
         @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0001')
         def related_models_changed(sender, instance, action, **kwargs):
             if action == 'post_add':
-                for channel in instance.channels.all():
-                    publish_post.delay(channel.pk, instance.pk, disable_notification=disable_notification)
+                send_post_task.delay(instance.pk, disable_notification=disable_notification)
 
 
 @receiver(unpublish_post_signal)
 def unpublish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
-    for channel in instance.channels.all():
-        unpublish_post.delay(channel.pk, instance.pk)
+    delete_post_task.delay(instance.pk)
 
 
 @receiver(edit_post_signal)
 def edit_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
-    for channel in instance.channels.all():
-        edit_post.delay(channel.pk, instance.pk)
+    edit_post_task.delay(instance.pk)

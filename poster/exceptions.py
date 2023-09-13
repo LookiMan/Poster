@@ -6,3 +6,7 @@ class BotNotSetException(Exception):
 
 class UnknownPostType(Exception):
     pass
+
+
+class SenderNotFound(Exception):
+    pass

@@ -23,11 +23,15 @@ class TelegramMarkdownConverter(MarkdownConverter):
         return text.replace('\n\n', '\n')
 
 
-def prepare_message(message: str) -> str:
-    message = TelegramMarkdownConverter(bullets='-').convert(message)
-    message = message.replace('.', '\\.')
-    message = message.replace('-', '\\-')
+def escape_chars(message: str) -> str:
+    chars = ['_', '*', '[', ']', '(', ')', '~', '`', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    for char in chars:
+        message = message.replace(char, f'\\{char}')
     return message
+
+
+def escape_telegram_message(message: str) -> str:
+    return TelegramMarkdownConverter(bullets='-').convert(escape_chars(message))
 
 
 def get_default_telegram_image():

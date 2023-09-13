@@ -1,3 +1,6 @@
+from abc import abstractmethod
+from abc import ABC
+from typing import Any
 from typing import List
 from io import BytesIO
 from os import path
@@ -5,23 +8,59 @@ from os import getenv
 
 from django.db.models import QuerySet
 
+from telebot.apihelper import ApiTelegramException
 from telebot.types import Message
 from telebot.types import InputMediaDocument
 from telebot.types import InputMediaPhoto
 
+from .enums import PostChannelEnum
+from .exceptions import SenderNotFound
 from .exceptions import UnknownPostType
+from .models import Bot
 from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
-from .utils import prepare_message
+from .utils import escape_telegram_message
 
-from telegram import TelegramBot
+from discord_bot import DiscordBot
+from telegram_bot import TelegramBot
+
+import logging
+logger = logging.getLogger(__name__)
 
 
-class Sender:
-    def __init__(self, bot: TelegramBot) -> None:
-        self.bot = bot
+class AbstractSender(ABC):
+    @abstractmethod
+    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> Any:
+        pass
+
+
+class DiscordSender(AbstractSender):
+    def __init__(self, bot: Bot) -> None:
+        self.bot = DiscordBot(bot.token)  # TODO: Add to model Bot field webhook
+
+    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> None:
+        pass
+
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> None:
+        pass
+
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> None:
+        return self.bot.send_message(channel_id, post.message)
+
+
+class TelegramSender(AbstractSender):
+    def __init__(self, bot: Bot) -> None:
+        self.bot = TelegramBot(bot.token)
 
         self.root = getenv('PROJECT_LOCATION', '')
         if not self.root:
@@ -49,7 +88,7 @@ class Sender:
                 files.append(
                     InputMediaDocument(
                         BytesIO(file.read()),
-                        caption=prepare_message(document.caption),
+                        caption=escape_telegram_message(document.caption),
                         parse_mode='MarkdownV2',
                     )
                 )
@@ -62,7 +101,7 @@ class Sender:
                 files.append(
                     InputMediaPhoto(
                         BytesIO(file.read()),
-                        caption=prepare_message(photo.caption),
+                        caption=escape_telegram_message(photo.caption),
                         parse_mode='MarkdownV2',
                     )
                 )
@@ -83,86 +122,73 @@ class Sender:
         with open(self._get_path(voice), mode='rb') as file:
             return self.bot.send_voice(channel_id, file, *args, **kwargs)
 
-    def delete_post(self, channel_id: int, message_id: int) -> bool:
-        return self.bot.delete_message(channel_id, message_id)
+    def delete_message(self, channel_id: int, message_id: int) -> dict:
+        try:
+            status = self.bot.delete_message(channel_id, message_id)
+        except ApiTelegramException:
+            status = False
+        except Exception as e:
+            logger.exception(e)
+            status = False
 
-    def edit_post(self, channel: Channel, post: Post, **kwargs) -> List[Message]:
-        responses = []
-        for message in post.messages.all():
-            if post.message:
-                responses.append(
-                    self.bot.edit_message_text(
-                        channel.channel_id,
-                        message.message_id,
-                        text=prepare_message(post.message),
-                        **kwargs,
-                    )
-                )
-            else:
-                responses.append(
-                    self.bot.edit_message_caption(
-                        channel.channel_id,
-                        message.message_id,
-                        caption=prepare_message(post.caption),
-                        **kwargs,
-                    )
-                )
-        return responses
+        return {
+            'channel_id': channel_id,
+            'message_id': message_id,
+            'deleted': status,
+        }
 
-    def send_post(self, channel: Channel, post: Post, **kwargs) -> List[Message] | Message:
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> List[Message]:
+        message = escape_telegram_message(post.message or post.caption)
+
+        if post.message:
+            return self.bot.edit_message_text(channel_id, message_id, text=message, **kwargs)
+
+        return self.bot.edit_message_caption(channel_id, message_id, caption=message, **kwargs)
+
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> List[Message] | Message:
+        message = escape_telegram_message(post.message or post.caption)
+
         if post.audio:
-            return self._send_audio(
-                channel.channel_id,
-                post.audio,
-                caption=prepare_message(post.caption),
-                **kwargs
-            )
+            return self._send_audio(channel_id, post.audio, caption=message, **kwargs)
         elif post.document:
-            return self._send_document(
-                channel.channel_id,
-                post.document,
-                caption=prepare_message(post.caption),
-                **kwargs
-            )
+            return self._send_document(channel_id, post.document, caption=message, **kwargs)
         elif post.gallery_documents:
             kwargs.pop('parse_mode', None)  # TODO:
-            return self._send_gallery_documents(
-                channel.channel_id,
-                post.gallery_documents.all(),
-                **kwargs
-            )
+            return self._send_gallery_documents(channel_id, post.gallery_documents.all(), **kwargs)
         elif post.gallery_photos:
             kwargs.pop('parse_mode', None)  # TODO:
-            return self._send_gallery_photos(
-                channel.channel_id,
-                post.gallery_photos.all(),
-                **kwargs
-            )
+            return self._send_gallery_photos(channel_id, post.gallery_photos.all(), **kwargs)
         elif post.message:
-            return self._send_message(
-                channel.channel_id,
-                prepare_message(post.message),
-                **kwargs
-            )
+            return self._send_message(channel_id, message, **kwargs)
         elif post.photo:
-            return self._send_photo(
-                channel.channel_id,
-                post.photo,
-                caption=prepare_message(post.caption),
-                **kwargs
-            )
+            return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
         elif post.video:
-            return self._send_video(
-                channel.channel_id,
-                post.video,
-                caption=prepare_message(post.caption),
-                **kwargs
-            )
+            return self._send_video(channel_id, post.video, caption=message, **kwargs)
         elif post.voice:
-            return self._send_voice(
-                channel.channel_id,
-                post.voice,
-                caption=prepare_message(post.caption),
-                **kwargs
-            )
+            return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
         raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
+
+
+class Sender:
+    senders = {
+        PostChannelEnum.TELEGRAM: TelegramSender,
+        PostChannelEnum.DISCORD: DiscordSender,
+    }
+    sender = None
+
+    def __init__(self, channel: Channel) -> None:
+        sender = self.senders.get(channel.channel_type)
+
+        if not sender:
+            raise SenderNotFound(f'Not found sender for channel with type {channel.channel_type}')
+
+        self.sender = sender(channel.bot)
+
+    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
+        return self.sender.delete_message(channel_id, message_id, **kwargs)
+
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> Any:
+        return self.sender.edit_message(channel_id, message_id, post, **kwargs)
+
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> Any:
+        return self.sender.send_message(channel_id, post, **kwargs)

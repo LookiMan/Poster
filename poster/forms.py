@@ -20,7 +20,7 @@ from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
 
-from telegram import TelegramBot
+from telegram_bot import TelegramBot
 
 
 class InlineFroalaEditor(FroalaEditor):

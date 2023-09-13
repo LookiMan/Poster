@@ -93,7 +93,7 @@ class Channel(BaseMixin, ImageMixin):
         choices=PostChannelEnum.choices,
         default=PostChannelEnum.TELEGRAM,
         verbose_name=_('Channel type'),
-        help_text=_('Available: {}'.format('; '.join([str(l) for l in PostChannelEnum.labels]))),
+        help_text=_('Available: {}'.format('; '.join([str(label) for label in PostChannelEnum.labels]))),
     )
 
     title = CharField(
