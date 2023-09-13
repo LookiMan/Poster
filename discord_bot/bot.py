@@ -1,6 +1,7 @@
 from re import search
 
 from discord import SyncWebhook
+from discord.types.webhook import Webhook
 from requests import Session
 
 
@@ -13,8 +14,8 @@ class DiscordBot:
         self.webhook_id = data['id']
         self.webhook_token = data['token']
 
-    def client(self, chat_id: int):
-        data = {
+    def client(self, chat_id: int) -> SyncWebhook:
+        data: Webhook = {
             'id': self.webhook_id,
             'token': self.webhook_token,
             'type': 1,

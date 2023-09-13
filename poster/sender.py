@@ -171,13 +171,12 @@ class TelegramSender(AbstractSender):
 
 class Sender:
     senders = {
-        PostChannelEnum.TELEGRAM: TelegramSender,
         PostChannelEnum.DISCORD: DiscordSender,
+        PostChannelEnum.TELEGRAM: TelegramSender,
     }
-    sender = None
 
     def __init__(self, channel: Channel) -> None:
-        sender = self.senders.get(channel.channel_type)
+        sender = self.senders.get(channel.channel_type)  # type: ignore
 
         if not sender:
             raise SenderNotFound(f'Not found sender for channel with type {channel.channel_type}')
