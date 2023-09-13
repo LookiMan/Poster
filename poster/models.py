@@ -6,7 +6,6 @@ from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import ImageField
-from django.db.models import IntegerField
 from django.db.models import TextField
 from django.db.models import UUIDField
 from django.db.models import SET_NULL
@@ -15,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from froala_editor.fields import FroalaField
 
+from .enums import PostChannelEnum
 from .enums import PostTypeEnum
 from .enums import TaskTypeEnum
 from .mixins import BaseMixin
@@ -79,46 +79,54 @@ class Channel(BaseMixin, ImageMixin):
         'Bot',
         null=True,
         on_delete=SET_NULL,
-        verbose_name=_('Telegram bot'),
+        verbose_name=_('Bot'),
         help_text=_('Select the previously created Telegram bot that you added to the Telegram channel as an administrator'), # NOQA
     )
 
     channel_id = BigIntegerField(
-        verbose_name=_('Telegram channel id'),
-        help_text=_(''),
+        verbose_name=_('Channel id'),
+        help_text=_('Insert your channel id'),
+    )
+
+    channel_type = CharField(
+        max_length=255,
+        choices=PostChannelEnum.choices,
+        default=PostChannelEnum.TELEGRAM,
+        verbose_name=_('Channel type'),
+        help_text=_('Available: {}'.format('; '.join([str(l) for l in PostChannelEnum.labels]))),
     )
 
     title = CharField(
         max_length=255,
         null=True,
         blank=True,
-        verbose_name=_('Telegram channel name'),
-        help_text=_(''),
+        verbose_name=_('Channel name'),
+        help_text=_('Name retrieved automatically via API'),
     )
 
     description = CharField(
         null=True,
         blank=True,
-        verbose_name=_('Telegram channel description'),
-        help_text=_(''),
+        verbose_name=_('Channel description'),
+        help_text=_('Description retrieved automatically via API'),
     )
 
     username = CharField(
         null=True,
         blank=True,
-        verbose_name=_('Telegram channel username'),
-        help_text=_(''),
+        verbose_name=_('Channel username'),
+        help_text=_('Username retrieved automatically via API'),
     )
 
     invite_link = CharField(
         null=True,
         blank=True,
-        verbose_name=_('Telegram channel invite link'),
-        help_text=_(''),
+        verbose_name=_('Channel link'),
+        help_text=_('Link retrieved automatically via API'),
     )
 
     def __str__(self):
-        return f'Telegram channel: {self.title}'
+        return f'{self.get_channel_type_display()} channel: {self.title}'
 
     class Meta:
         ordering = ['-created_at']
@@ -262,13 +270,11 @@ class Post(BaseMixin, ChannelsMixin):
 
 
 class PostMessage(BaseMixin):
-    channel_id = IntegerField(
-        verbose_name=_('Channel id'),
-    )
-
-    channel_username = CharField(
-        max_length=255,
-        verbose_name=_('Channel username'),
+    channel = ForeignKey(
+        'Channel',
+        null=True,
+        on_delete=SET_NULL,
+        verbose_name=_('Channel'),
     )
 
     message_id = BigIntegerField(

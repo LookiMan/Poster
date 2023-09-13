@@ -7,6 +7,9 @@ django-froala-editor==4.1.1
 # Database
 psycopg2==2.9.7
 
+# Discord
+discord.py==2.3.2
+
 # Celery
 redis==4.6.0
 django-celery-beat==2.5.0

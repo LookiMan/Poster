@@ -2,6 +2,11 @@ from django.db.models import TextChoices
 from django.utils.translation import gettext_lazy as _
 
 
+class PostChannelEnum(TextChoices):
+    DISCORD = 'discord', _('Discord')
+    TELEGRAM = 'telegram', _('Telegram')
+
+
 class PostTypeEnum(TextChoices):
     AUDIO = 'audio', _('Audio message')
     DOCUMENT = 'document', _('Document message')

@@ -78,6 +78,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
     form = ChannelAdminForm
 
     list_display = (
+        'channel_type',
         'title',
         'username',
         'description',
@@ -231,8 +232,8 @@ class PostAdmin(ModelAdmin):
 
         return mark_safe('<ul class="list-group">{}</ul>'.format(
             ''.join([
-                template.format(channel_username=message.channel_username, message_id=message.message_id)
-                for message in obj.messages.all()
+                template.format(channel_username=message.channel.username, message_id=message.message_id)
+                for message in obj.messages.all() if message.channel and message.message_id
             ])
         ))
 
