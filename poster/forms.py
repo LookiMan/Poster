@@ -69,6 +69,10 @@ class BotAdminForm(ModelForm):
             self._validate_discord_fields(cleaned_data)
         elif bot_type == MessengerEnum.TELEGRAM:
             self._validate_telegram_fields(cleaned_data)
+        else:
+            raise ValidationError(
+                _('Unknown bot type specified')
+            )
 
 
 class ChannelAdminForm(ModelForm):
@@ -99,17 +103,19 @@ class ChannelAdminForm(ModelForm):
                     'make sure that the bot is added to the channel with administrator rights'
                 )
             )
-        logger.exception([bot, channel_id, cleaned_data])
 
     def clean(self):
         cleaned_data = super().clean()
         channel_type = cleaned_data.get('channel_type')
 
-        if channel_type:
-            if channel_type == MessengerEnum.DISCORD:
-                self._validate_discord_fields(cleaned_data)
-            elif channel_type == MessengerEnum.TELEGRAM:
-                self._validate_telegram_fields(cleaned_data)
+        if channel_type == MessengerEnum.DISCORD:
+            self._validate_discord_fields(cleaned_data)
+        elif channel_type == MessengerEnum.TELEGRAM:
+            self._validate_telegram_fields(cleaned_data)
+        else:
+            raise ValidationError(
+                _('Unknown channel type specified')
+            )
 
 
 class PostAdminForm(ModelForm):

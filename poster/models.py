@@ -6,6 +6,7 @@ from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import ImageField
+from django.db.models import QuerySet
 from django.db.models import TextField
 from django.db.models import UUIDField
 from django.db.models import SET_NULL
@@ -22,14 +23,8 @@ from .mixins import ChannelsMixin
 from .mixins import ImageMixin
 
 
-class Bot(BaseMixin, ImageMixin):
-    bot_id = BigIntegerField(
-        null=True,
-        blank=True,
-        verbose_name=_('Bot id'),
-    )
-
-    bot_type = CharField(
+class Bot(BaseMixin):
+    bot_type: CharField = CharField(
         max_length=255,
         choices=MessengerEnum.choices,
         default=MessengerEnum.TELEGRAM,
@@ -37,7 +32,7 @@ class Bot(BaseMixin, ImageMixin):
         help_text=_('Available types: {}').format('; '.join([str(label) for label in MessengerEnum.labels])),
     )
 
-    token = CharField(
+    token: CharField = CharField(
         null=True,
         blank=True,
         max_length=255,
@@ -48,7 +43,7 @@ class Bot(BaseMixin, ImageMixin):
         ),
     )
 
-    webhook = CharField(
+    webhook: CharField = CharField(
         null=True,
         blank=True,
         max_length=255,
@@ -59,33 +54,14 @@ class Bot(BaseMixin, ImageMixin):
         ),
     )
 
-    first_name = CharField(
-        null=True,
-        blank=True,
-        max_length=255,
-        verbose_name=_('Bot first name'),
-    )
-
-    last_name = CharField(
-        null=True,
-        blank=True,
-        max_length=255,
-        verbose_name=_('Bot last name'),
-    )
-
-    username = CharField(
+    username: CharField = CharField(
         null=True,
         blank=True,
         max_length=255,
         verbose_name=_('Bot username'),
     )
 
-    can_join_groups = BooleanField(
-        default=False,
-        verbose_name=_('Can join to groups'),
-    )
-
-    def __str__(self):
+    def __str__(self) -> str:
         return f'@{self.username}'
 
     class Meta:
@@ -96,36 +72,36 @@ class Bot(BaseMixin, ImageMixin):
 
 
 class Channel(BaseMixin, ImageMixin):
-    bot = ForeignKey(
+    bot: ForeignKey = ForeignKey(
         'Bot',
         null=True,
         on_delete=SET_NULL,
         verbose_name=_('Bot'),
-        help_text=_('Select the previously created Telegram bot that you added to the Telegram channel as an administrator'), # NOQA
+        help_text=_('Previously created bot'),
     )
 
-    channel_type = CharField(
+    channel_type: CharField = CharField(
         max_length=255,
         choices=MessengerEnum.choices,
         verbose_name=_('Channel type'),
         help_text=_('Available types: {}').format('; '.join([str(label) for label in MessengerEnum.labels])),
     )
 
-    channel_id = BigIntegerField(
+    channel_id: BigIntegerField = BigIntegerField(
         null=True,
         blank=True,
         verbose_name=_('Channel id'),
         help_text=_('Insert your channel id'),
     )
 
-    discord_server_id = BigIntegerField(
+    server_id: BigIntegerField = BigIntegerField(
         null=True,
         blank=True,
         verbose_name=_('Discord server id'),
         help_text=_('Insert your discord server id'),
     )
 
-    title = CharField(
+    title: CharField = CharField(
         max_length=255,
         null=True,
         blank=True,
@@ -133,34 +109,34 @@ class Channel(BaseMixin, ImageMixin):
         help_text=_('Name retrieved automatically via API'),
     )
 
-    description = CharField(
+    description: TextField = TextField(
         null=True,
         blank=True,
         verbose_name=_('Channel description'),
         help_text=_('Description retrieved automatically via API'),
     )
 
-    username = CharField(
+    username: CharField = CharField(
         null=True,
         blank=True,
         verbose_name=_('Channel username'),
         help_text=_('Username retrieved automatically via API'),
     )
 
-    invite_link = CharField(
+    invite_link: CharField = CharField(
         null=True,
         blank=True,
         verbose_name=_('Channel link'),
         help_text=_('Link retrieved automatically via API'),
     )
 
-    is_completed = BooleanField(
+    is_completed: BooleanField = BooleanField(
         default=False,
         verbose_name=_('Is completed')
     )
 
-    def __str__(self):
-        return f'{self.get_channel_type_display()} channel: {self.title}'
+    def __str__(self) -> str:
+        return f'{self.get_channel_type_display()} channel: {self.title}'  # type: ignore
 
     class Meta:
         ordering = ['-created_at']
@@ -170,19 +146,20 @@ class Channel(BaseMixin, ImageMixin):
 
 
 class GalleryDocument(BaseMixin):
-    post = ForeignKey(
+    post: ForeignKey = ForeignKey(
         'Post',
         null=True,
         blank=True,
         on_delete=CASCADE,
+        verbose_name=_('Post'),
     )
 
-    file = FileField(_('Document'))
+    file: FileField = FileField(_('Document'))
 
-    caption = TextField(
+    caption: TextField = TextField(
         blank=True,
         null=True,
-        verbose_name=_('document caption'),
+        verbose_name=_('Document caption'),
         help_text=_('Insert document caption'),
     )
 
@@ -192,19 +169,20 @@ class GalleryDocument(BaseMixin):
 
 
 class GalleryPhoto(BaseMixin):
-    post = ForeignKey(
+    post: ForeignKey = ForeignKey(
         'Post',
         null=True,
         blank=True,
         on_delete=CASCADE,
+        verbose_name=_('Post'),
     )
 
-    file = ImageField(_('Photo'))
+    file: ImageField = ImageField(_('Photo'))
 
-    caption = TextField(
+    caption: TextField = TextField(
         blank=True,
         null=True,
-        verbose_name=_('photo caption'),
+        verbose_name=_('Photo caption'),
         help_text=_('Insert photo caption'),
     )
 
@@ -214,87 +192,87 @@ class GalleryPhoto(BaseMixin):
 
 
 class Post(BaseMixin, ChannelsMixin):
-    post_type = CharField(
+    post_type: CharField = CharField(
         max_length=32,
         choices=PostTypeEnum.choices,
         verbose_name=_('Post type'),
         help_text=_('Select post type to continue'),
     )
 
-    audio = FileField(
+    audio: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Audio file'),
         help_text=_('Select an audio file to send as a voice message'),
     )
 
-    document = FileField(
+    document: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Document file'),
         help_text=_(''),
     )
 
-    video = FileField(
+    video: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Video file'),
         help_text=_(''),
     )
 
-    photo = ImageField(
+    photo: ImageField = ImageField(
         blank=True,
         null=True,
         verbose_name=_('Photo file'),
         help_text=_(''),
     )
 
-    voice = FileField(
+    voice: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Voice file'),
         help_text=_(''),
     )
 
-    caption = FroalaField(
+    caption: FroalaField = FroalaField(
         blank=True,
         null=True,
         verbose_name=_('Caption'),
         help_text=_('Insert caption (max length 255 symbols)'),
     )
 
-    message = FroalaField(
+    message: FroalaField = FroalaField(
         blank=True,
         null=True,
         verbose_name=_('Message text'),
         help_text=_('Enter the text to send it to the channel. The maximum length for one message is 4096 characters'), # NOQA
     )
 
-    is_published = BooleanField(
+    is_published: BooleanField = BooleanField(
         default=False,
         verbose_name=_('Is published')
     )
 
-    messages = ManyToManyField(
+    messages: ManyToManyField = ManyToManyField(
         'PostMessage',
         verbose_name=_('Messages'),
         related_name='messages',
     )
 
     @property
-    def gallery_documents(self):
-        return GalleryDocument.objects.filter(post_id=self.id)
+    def gallery_documents(self) -> QuerySet:
+        return GalleryDocument.objects.filter(post_id=self.pk)
 
     @property
-    def gallery_photos(self):
-        return GalleryPhoto.objects.filter(post_id=self.id)
+    def gallery_photos(self) -> QuerySet:
+        return GalleryPhoto.objects.filter(post_id=self.pk)
 
     @property
-    def is_media_gallery(self):
+    def is_media_gallery(self) -> bool:
         return self.post_type in [PostTypeEnum.GALLERY_DOCUMENTS, PostTypeEnum.GALLERY_PHOTOS]
 
-    def __str__(self):
-        return f'{self.post_type} post with id {self.id}'
+    def __str__(self) -> str:
+        return f'{self.post_type} post with id {self.pk}'
 
     class Meta:
         ordering = ['-updated_at']
@@ -304,52 +282,53 @@ class Post(BaseMixin, ChannelsMixin):
 
 
 class PostMessage(BaseMixin):
-    channel = ForeignKey(
+    channel: ForeignKey = ForeignKey(
         'Channel',
         null=True,
         on_delete=SET_NULL,
         verbose_name=_('Channel'),
     )
 
-    message_id = BigIntegerField(
+    message_id: BigIntegerField = BigIntegerField(
         verbose_name=_('Message id'),
     )
 
     @property
-    def href(self):
-        if not self.channel:
+    def href(self) -> str:
+        channel = self.channel
+        if not channel:
             return '#'
-        if self.channel.channel_type == MessengerEnum.DISCORD:
-            return f'https://discord.com/channels/{self.channel.server_id}/{self.channel.channel_id}/{self.message_id}' # NOQA
-        elif self.channel.channel_type == MessengerEnum.TELEGRAM:
-            return f'https://t.me/{self.channel.channel_username}/{self.message_id}'
+        if channel.channel_type == MessengerEnum.DISCORD:
+            return f'https://discord.com/channels/{channel.server_id}/{channel.channel_id}/{self.message_id}'
+        elif channel.channel_type == MessengerEnum.TELEGRAM:
+            return f'https://t.me/{channel.channel_username}/{self.message_id}'
         else:
             return '#'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Channel message id: {self.message_id}'
 
 
 class Task(BaseMixin):
 
-    created_at = DateTimeField(
+    created_at: DateTimeField = DateTimeField(
         verbose_name=_('Date of creation'),
         auto_now_add=True,
         null=True,
     )
 
-    task_id = UUIDField(
+    task_id: UUIDField = UUIDField(
         verbose_name=_('Celery task id'),
     )
 
-    channel = ForeignKey(
+    channel: ForeignKey = ForeignKey(
         'Channel',
         on_delete=SET_NULL,
         null=True,
         verbose_name=_('Channel'),
     )
 
-    task_type = CharField(
+    task_type: CharField = CharField(
         null=True,
         max_length=32,
         choices=TaskTypeEnum.choices,
@@ -357,19 +336,19 @@ class Task(BaseMixin):
         help_text=_('Type of action at which the record was created'),
     )
 
-    response = TextField(
+    response: TextField = TextField(
         null=True,
         verbose_name=_('Response data'),
         help_text=_('Automatically recorded result of sending a message'),
     )
 
-    exception = TextField(
+    exception: TextField = TextField(
         null=True,
         verbose_name=_('Exception data'),
         help_text=_('Automatically detected exception to sending a message'),
     )
 
-    post = ForeignKey(
+    post: ForeignKey = ForeignKey(
         'Post',
         on_delete=SET_NULL,
         null=True,
@@ -377,7 +356,7 @@ class Task(BaseMixin):
         help_text=_('Original post'),
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.channel and self.channel.title}'
 
     class Meta:

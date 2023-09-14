@@ -1,3 +1,6 @@
+from typing import Any
+from django.contrib.admin import ModelAdmin
+from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import DateTimeField
 from django.db.models import ImageField
 from django.db.models import ManyToManyField
@@ -9,16 +12,16 @@ from .utils import get_default_telegram_image
 
 
 class BaseMixin(Model):
-    created_at = DateTimeField(
-        verbose_name=_('Date of creation'),
+    created_at: DateTimeField = DateTimeField(
         auto_now_add=True,
         null=True,
+        verbose_name=_('Date of creation'),
     )
 
-    updated_at = DateTimeField(
-        verbose_name=_('Date of update'),
+    updated_at: DateTimeField = DateTimeField(
         auto_now=True,
         null=True,
+        verbose_name=_('Date of update'),
     )
 
     class Meta:
@@ -26,7 +29,7 @@ class BaseMixin(Model):
 
 
 class ChannelsMixin(Model):
-    channels = ManyToManyField(
+    channels: ManyToManyField = ManyToManyField(
         'Channel',
         verbose_name=_('Channels'),
     )
@@ -36,13 +39,13 @@ class ChannelsMixin(Model):
 
 
 class ImageMixin(Model):
-    image = ImageField(
+    image: ImageField = ImageField(
         null=True,
         blank=True,
         verbose_name=_('Image'),
     )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         if not self.image:
             self.image.name = get_default_telegram_image()
         return super().save(*args, **kwargs)
@@ -51,17 +54,17 @@ class ImageMixin(Model):
         abstract = True
 
 
-class AdminImageMixin:
-    def preview_image(self, obj):
+class AdminImageMixin(ModelAdmin):
+    def preview_image(self, obj: Any) -> str:
         if obj.image:
             return mark_safe(f'<img src="{obj.image.url}" width="75" style="border-radius: 50%;">')
         else:
-            return _('[Image not set]')
+            return '[Image not set]'
 
     preview_image.short_description = _('Image')
 
-    def get_list_display(self, request):
-        return (*super().get_list_display(request), 'preview_image')
+    def get_list_display(self, request: WSGIRequest) -> list:
+        return [*super().get_list_display(request), 'preview_image']
 
 
 class MediaGalleryMixin:

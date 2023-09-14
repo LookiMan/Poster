@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
+from .enums import MessengerEnum
 from .exceptions import BotNotSetException
 from .models import Bot
 from .models import Channel
@@ -28,19 +29,21 @@ def bot_post_save(sender: Bot, instance: Bot, created: bool, **kwargs) -> None:
     if not created:
         return
 
-    try:
-        info = TelegramBot(instance.token).get_me()
-    except Exception as e:
-        logger.exception(e)
-        info = None
+    if instance.bot_type == MessengerEnum.DISCORD:
+        return
 
-    if info:
-        instance.bot_id = info.id
-        instance.first_name = info.first_name
-        instance.last_name = info.last_name
-        instance.username = info.username
-        instance.can_join_groups = info.can_join_groups
-        instance.save()
+    elif instance.bot_type == MessengerEnum.TELEGRAM:
+        try:
+            info = TelegramBot(instance.token).get_me()
+        except Exception as e:
+            logger.exception(e)
+            info = None
+
+        if info:
+            instance.username = info.username
+            instance.save()
+    else:
+        logger.error(f'Created bot with unknown type {instance.bot_type}')
 
 
 @receiver(post_save, sender=Channel)

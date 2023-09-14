@@ -37,14 +37,14 @@ class GalleryPhotoInline(TabularInline):
 
 
 @register(Bot)
-class BotAdmin(AdminImageMixin, ModelAdmin):
+class BotAdmin(ModelAdmin):
     model = Bot
     form = BotAdminForm
 
     list_display = (
         'bot_type',
-        'first_name',
         'username',
+        'preview',
     )
 
     def get_user_fields(self, request, obj=None):
@@ -54,19 +54,13 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
                 fields.remove('token')
             elif obj.bot_type == MessengerEnum.TELEGRAM:
                 fields.remove('webhook')
-                fields.append('can_join_groups')
 
         return fields
 
     def get_auto_fields(self, request, obj=None):
         if not obj:
             return []
-        return [
-            'bot_id',
-            'first_name',
-            'last_name',
-            'username',
-        ]
+        return ['username']
 
     def get_fieldsets(self, request, obj=None):
         return [
@@ -77,12 +71,7 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
         ]
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_files = [
-            'bot_id',
-            'first_name',
-            'last_name',
-            'username',
-        ]
+        readonly_files = ['username']
 
         if obj:
             readonly_files.append('bot_type')
@@ -91,10 +80,7 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
                 readonly_files.append('webhook')
 
             elif obj.bot_type == MessengerEnum.TELEGRAM:
-                readonly_files.extend([
-                    'token',
-                    'can_join_groups'
-                ])
+                readonly_files.append('token')
 
         return (*self.readonly_fields, *readonly_files)
 
@@ -110,6 +96,16 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def preview(self, obj):
+        if obj.bot_type == MessengerEnum.DISCORD:
+            return f'Webhook: {"*" * len(obj.webhook[:-4])}{obj.webhook[-4:]}'
+        elif obj.bot_type == MessengerEnum.TELEGRAM:
+            return f'Token: {"*" * len(obj.token[:-4])}{obj.token[-4:]}'
+        else:
+            return str(
+                _('Unknown bot type: {bot_type}').format(obj.bot_type)
+            )
 
     class Media:
         js = (
@@ -132,7 +128,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
         'is_completed',
     )
 
-    def get_dynamic_fields(self, request, obj=None):
+    def get_user_fields(self, request, obj=None):
         fields = ['channel_type']
         if obj:
             if not obj.bot:
@@ -141,11 +137,11 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
             fields.append('channel_id')
 
             if obj.channel_type == MessengerEnum.DISCORD:
-                fields.append('discord_server_id')
+                fields.append('server_id')
 
         return fields
 
-    def get_all_fields(self, request, obj=None):
+    def get_auto_fields(self, request, obj=None):
         if not obj:
             return []
         return [
@@ -158,8 +154,8 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
     def get_fieldsets(self, request, obj=None):
         return [
             (None, {'fields': [
-                *self.get_dynamic_fields(request, obj),
-                *self.get_all_fields(request, obj),
+                *self.get_user_fields(request, obj),
+                *self.get_auto_fields(request, obj),
             ]})
         ]
 

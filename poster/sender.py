@@ -52,7 +52,7 @@ class AbstractSender(ABC):
 
 class DiscordSender(AbstractSender):
     def __init__(self, bot: Bot) -> None:
-        self.bot = DiscordBot(bot.token)  # TODO: Add to model Bot field webhook
+        self.bot = DiscordBot(bot.webhook)
 
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         try:
@@ -76,9 +76,9 @@ class DiscordSender(AbstractSender):
         return self.bot.send_message(channel_id, message, **kwargs)
 
     def prepare_kwargs(self, **kwargs) -> dict:
-        disable_notification = kwargs.pop('parse_mode', None)
         disable_notification = kwargs.pop('disable_notification', False)
 
+        kwargs.pop('parse_mode', None)
         kwargs.update({
             'silent': disable_notification
         })
