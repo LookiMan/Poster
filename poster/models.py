@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from froala_editor.fields import FroalaField
 
-from .enums import PostChannelEnum
+from .enums import MessengerEnum
 from .enums import PostTypeEnum
 from .enums import TaskTypeEnum
 from .mixins import BaseMixin
@@ -29,7 +29,17 @@ class Bot(BaseMixin, ImageMixin):
         verbose_name=_('Bot id'),
     )
 
+    bot_type = CharField(
+        max_length=255,
+        choices=MessengerEnum.choices,
+        default=MessengerEnum.TELEGRAM,
+        verbose_name=_('Bot type'),
+        help_text=_('Available types: {}').format('; '.join([str(label) for label in MessengerEnum.labels])),
+    )
+
     token = CharField(
+        null=True,
+        blank=True,
         max_length=255,
         verbose_name=_('Telegram bot token'),
         help_text=_(
@@ -38,25 +48,36 @@ class Bot(BaseMixin, ImageMixin):
         ),
     )
 
+    webhook = CharField(
+        null=True,
+        blank=True,
+        max_length=255,
+        verbose_name=_('Discord webhook'),
+        help_text=_(
+            'Create a Discord webhook using Server Settings > Integrations > Webhooks.<br>'
+            'Webhook example: https://discord.com/api/webhooks/your-webhook-id/your-webhook-token'
+        ),
+    )
+
     first_name = CharField(
         null=True,
         blank=True,
         max_length=255,
-        verbose_name=_('Telegram bot first name'),
+        verbose_name=_('Bot first name'),
     )
 
     last_name = CharField(
         null=True,
         blank=True,
         max_length=255,
-        verbose_name=_('Telegram bot last name'),
+        verbose_name=_('Bot last name'),
     )
 
     username = CharField(
         null=True,
         blank=True,
         max_length=255,
-        verbose_name=_('Telegram bot username'),
+        verbose_name=_('Bot username'),
     )
 
     can_join_groups = BooleanField(
@@ -83,17 +104,25 @@ class Channel(BaseMixin, ImageMixin):
         help_text=_('Select the previously created Telegram bot that you added to the Telegram channel as an administrator'), # NOQA
     )
 
+    channel_type = CharField(
+        max_length=255,
+        choices=MessengerEnum.choices,
+        verbose_name=_('Channel type'),
+        help_text=_('Available types: {}').format('; '.join([str(label) for label in MessengerEnum.labels])),
+    )
+
     channel_id = BigIntegerField(
+        null=True,
+        blank=True,
         verbose_name=_('Channel id'),
         help_text=_('Insert your channel id'),
     )
 
-    channel_type = CharField(
-        max_length=255,
-        choices=PostChannelEnum.choices,
-        default=PostChannelEnum.TELEGRAM,
-        verbose_name=_('Channel type'),
-        help_text=_('Available: {}'.format('; '.join([str(label) for label in PostChannelEnum.labels]))),
+    discord_server_id = BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_('Discord server id'),
+        help_text=_('Insert your discord server id'),
     )
 
     title = CharField(
@@ -123,6 +152,11 @@ class Channel(BaseMixin, ImageMixin):
         blank=True,
         verbose_name=_('Channel link'),
         help_text=_('Link retrieved automatically via API'),
+    )
+
+    is_completed = BooleanField(
+        default=False,
+        verbose_name=_('Is completed')
     )
 
     def __str__(self):
@@ -280,6 +314,17 @@ class PostMessage(BaseMixin):
     message_id = BigIntegerField(
         verbose_name=_('Message id'),
     )
+
+    @property
+    def href(self):
+        if not self.channel:
+            return '#'
+        if self.channel.channel_type == MessengerEnum.DISCORD:
+            return f'https://discord.com/channels/{self.channel.server_id}/{self.channel.channel_id}/{self.message_id}' # NOQA
+        elif self.channel.channel_type == MessengerEnum.TELEGRAM:
+            return f'https://t.me/{self.channel.channel_username}/{self.message_id}'
+        else:
+            return '#'
 
     def __str__(self):
         return f'Channel message id: {self.message_id}'

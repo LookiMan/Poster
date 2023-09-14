@@ -9,6 +9,7 @@ from .forms import ChannelAdminForm
 from .forms import GalleryDocumentInlineForm
 from .forms import GalleryPhotoInlineForm
 from .forms import PostAdminForm
+from .enums import MessengerEnum
 from .enums import PostTypeEnum
 from .enums import TaskTypeEnum
 from .mixins import AdminImageMixin
@@ -41,22 +42,61 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
     form = BotAdminForm
 
     list_display = (
-        'bot_id',
+        'bot_type',
         'first_name',
-        'last_name',
         'username',
-        'can_join_groups',
     )
 
-    def get_fields(self, request, obj=None):
+    def get_user_fields(self, request, obj=None):
+        fields = ['bot_type', 'token', 'webhook']
+        if obj:
+            if obj.bot_type == MessengerEnum.DISCORD:
+                fields.remove('token')
+            elif obj.bot_type == MessengerEnum.TELEGRAM:
+                fields.remove('webhook')
+                fields.append('can_join_groups')
+
+        return fields
+
+    def get_auto_fields(self, request, obj=None):
         if not obj:
-            self.exclude = (*self.list_display, 'image')
-        return super().get_fields(request, obj)
+            return []
+        return [
+            'bot_id',
+            'first_name',
+            'last_name',
+            'username',
+        ]
+
+    def get_fieldsets(self, request, obj=None):
+        return [
+            (None, {'fields': [
+                *self.get_user_fields(request, obj),
+                *self.get_auto_fields(request, obj),
+            ]})
+        ]
 
     def get_readonly_fields(self, request, obj=None):
+        readonly_files = [
+            'bot_id',
+            'first_name',
+            'last_name',
+            'username',
+        ]
+
         if obj:
-            return (*self.readonly_fields, *self.list_display, 'token')
-        return self.readonly_fields
+            readonly_files.append('bot_type')
+
+            if obj.bot_type == MessengerEnum.DISCORD:
+                readonly_files.append('webhook')
+
+            elif obj.bot_type == MessengerEnum.TELEGRAM:
+                readonly_files.extend([
+                    'token',
+                    'can_join_groups'
+                ])
+
+        return (*self.readonly_fields, *readonly_files)
 
     def add_view(self, request, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -70,6 +110,12 @@ class BotAdmin(AdminImageMixin, ModelAdmin):
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    class Media:
+        js = (
+            'assets/vendor/js/jquery-3.7.0.min.js',
+            'assets/js/admin/bot-add.js',
+        )
 
 
 @register(Channel)
@@ -83,19 +129,52 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
         'username',
         'description',
         'invite_link',
+        'is_completed',
     )
 
-    def get_fields(self, request, obj=None):
+    def get_dynamic_fields(self, request, obj=None):
+        fields = ['channel_type']
+        if obj:
+            if not obj.bot:
+                fields.append('bot')
+
+            fields.append('channel_id')
+
+            if obj.channel_type == MessengerEnum.DISCORD:
+                fields.append('discord_server_id')
+
+        return fields
+
+    def get_all_fields(self, request, obj=None):
         if not obj:
-            self.exclude = ('image', *self.list_display)
-        else:
-            self.exclude = ('image',)
-        return super().get_fields(request, obj)
+            return []
+        return [
+            'title',
+            'username',
+            'description',
+            'invite_link',
+        ]
+
+    def get_fieldsets(self, request, obj=None):
+        return [
+            (None, {'fields': [
+                *self.get_dynamic_fields(request, obj),
+                *self.get_all_fields(request, obj),
+            ]})
+        ]
 
     def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return (*self.readonly_fields, *self.list_display, 'channel_id')
-        return self.readonly_fields
+        readonly_files = [
+            'title',
+            'username',
+            'description',
+            'invite_link',
+        ]
+
+        if obj and obj.channel_type:
+            readonly_files.append('channel_type')
+
+        return (*self.readonly_fields, *readonly_files)
 
     def add_view(self, request, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -108,6 +187,12 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj and obj.channel_type and form.base_fields.get('bot'):
+            form.base_fields['bot'].queryset = Bot.objects.filter(bot_type=obj.channel_type)
+        return form
 
 
 @register(Post)
@@ -225,14 +310,14 @@ class PostAdmin(ModelAdmin):
 
     def messages_links(self, obj):
         template = '''
-        <a class="list-group-item list-group-item-action" href="https://t.me/{channel_username}/{message_id}">
+        <a class="list-group-item list-group-item-action" href="{href}}">
             View message in channel @{channel_username}
         </a>
         '''
 
         return mark_safe('<ul class="list-group">{}</ul>'.format(
             ''.join([
-                template.format(channel_username=message.channel.username, message_id=message.message_id)
+                template.format(href=message.href, channel_username=message.channel.username)
                 for message in obj.messages.all() if message.channel and message.message_id
             ])
         ))

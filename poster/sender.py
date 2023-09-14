@@ -7,13 +7,14 @@ from os import path
 from os import getenv
 
 from django.db.models import QuerySet
-
+from discord import SyncWebhookMessage as DiscordMessage
+from requests.exceptions import RequestException
 from telebot.apihelper import ApiTelegramException
-from telebot.types import Message
+from telebot.types import Message as TelegramMessage
 from telebot.types import InputMediaDocument
 from telebot.types import InputMediaPhoto
 
-from .enums import PostChannelEnum
+from .enums import MessengerEnum
 from .exceptions import SenderNotFound
 from .exceptions import UnknownPostType
 from .models import Bot
@@ -21,6 +22,7 @@ from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
+from .utils import escape_discord_message
 from .utils import escape_telegram_message
 
 from discord_bot import DiscordBot
@@ -32,15 +34,19 @@ logger = logging.getLogger(__name__)
 
 class AbstractSender(ABC):
     @abstractmethod
-    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> Any:
+    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         pass
 
     @abstractmethod
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> Any:
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> DiscordMessage | TelegramMessage:  # NOQA: E501
         pass
 
     @abstractmethod
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> Any:
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> DiscordMessage | TelegramMessage:
+        pass
+
+    @abstractmethod
+    def prepare_kwargs(self, **kwargs) -> dict:
         pass
 
 
@@ -48,14 +54,36 @@ class DiscordSender(AbstractSender):
     def __init__(self, bot: Bot) -> None:
         self.bot = DiscordBot(bot.token)  # TODO: Add to model Bot field webhook
 
-    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> None:
-        pass
+    def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
+        try:
+            self.bot.delete_message(channel_id, message_id)
+            status = True
+        except (RequestException, ValueError) as e:
+            logger.exception(e)
+            status = False
 
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> None:
-        pass
+        return {
+            'channel_id': channel_id,
+            'message_id': message_id,
+            'deleted': status,
+        }
 
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> None:
-        return self.bot.send_message(channel_id, post.message)
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> DiscordMessage:
+        return self.bot.edit_message(channel_id, message_id, content=post.message, **kwargs)
+
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> DiscordMessage:
+        message = escape_discord_message(post.message)
+        return self.bot.send_message(channel_id, message, **kwargs)
+
+    def prepare_kwargs(self, **kwargs) -> dict:
+        disable_notification = kwargs.pop('parse_mode', None)
+        disable_notification = kwargs.pop('disable_notification', False)
+
+        kwargs.update({
+            'silent': disable_notification
+        })
+
+        return kwargs
 
 
 class TelegramSender(AbstractSender):
@@ -70,18 +98,18 @@ class TelegramSender(AbstractSender):
         filename = str(filename)[1:] if str(filename).startswith('/') else path.join('media', str(filename))
         return path.join(self.root, filename)
 
-    def _send_audio(self, channel_id: int, audio: str, *args, **kwargs) -> Message:
+    def _send_audio(self, channel_id: int, audio: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(audio), mode='rb') as file:
             return self.bot.send_audio(channel_id, file, *args, **kwargs)
 
-    def _send_document(self, channel_id: int, document: str, *args, **kwargs) -> Message:
+    def _send_document(self, channel_id: int, document: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(document), mode='rb') as file:
             return self.bot.send_document(channel_id, file, *args, **kwargs)
 
-    def _send_media_group(self, channel_id, files: List[GalleryDocument | GalleryPhoto], *args, **kwargs) -> List[Message]: # NOQA
+    def _send_media_group(self, channel_id, files: List[GalleryDocument | GalleryPhoto], *args, **kwargs) -> List[TelegramMessage]:  # NOQA: E501
         return self.bot.send_media_group(channel_id, files, *args, **kwargs)
 
-    def _send_gallery_documents(self, channel_id: int, documents: QuerySet[GalleryDocument], *args, **kwargs) -> List[Message]: # NOQA
+    def _send_gallery_documents(self, channel_id: int, documents: QuerySet[GalleryDocument], *args, **kwargs) -> List[TelegramMessage]:  # NOQA: E501
         files = []
         for document in documents:
             with open(self._get_path(document.file), mode='rb') as file:
@@ -94,7 +122,7 @@ class TelegramSender(AbstractSender):
                 )
         return self._send_media_group(channel_id, files, *args, **kwargs)
 
-    def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> List[Message]: # NOQA
+    def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> List[TelegramMessage]:  # NOQA: E501
         files = []
         for photo in photos:
             with open(self._get_path(photo.file), mode='rb') as file:
@@ -107,18 +135,18 @@ class TelegramSender(AbstractSender):
                 )
         return self._send_media_group(channel_id, files, *args, **kwargs)
 
-    def _send_message(self, channel_id: int, message: str, *args, **kwargs) -> Message:
+    def _send_message(self, channel_id: int, message: str, *args, **kwargs) -> TelegramMessage:
         return self.bot.send_message(channel_id, message, *args, **kwargs)
 
-    def _send_photo(self, channel_id: int, photo: str, *args, **kwargs) -> Message:
+    def _send_photo(self, channel_id: int, photo: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(photo), mode='rb') as file:
             return self.bot.send_photo(channel_id, file, *args, **kwargs)
 
-    def _send_video(self, channel_id: int, video: str, *args, **kwargs) -> Message:
+    def _send_video(self, channel_id: int, video: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(video), mode='rb') as file:
             return self.bot.send_video_note(channel_id, data=file)
 
-    def _send_voice(self, channel_id: int, voice: str, *args, **kwargs) -> Message:
+    def _send_voice(self, channel_id: int, voice: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(voice), mode='rb') as file:
             return self.bot.send_voice(channel_id, file, *args, **kwargs)
 
@@ -137,7 +165,7 @@ class TelegramSender(AbstractSender):
             'deleted': status,
         }
 
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> List[Message]:
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> List[TelegramMessage]:
         message = escape_telegram_message(post.message or post.caption)
 
         if post.message:
@@ -145,7 +173,7 @@ class TelegramSender(AbstractSender):
 
         return self.bot.edit_message_caption(channel_id, message_id, caption=message, **kwargs)
 
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> List[Message] | Message:
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> List[TelegramMessage] | TelegramMessage:
         message = escape_telegram_message(post.message or post.caption)
 
         if post.audio:
@@ -168,11 +196,14 @@ class TelegramSender(AbstractSender):
             return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
         raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
 
+    def prepare_kwargs(self, **kwargs) -> dict:
+        return kwargs
+
 
 class Sender:
     senders = {
-        PostChannelEnum.DISCORD: DiscordSender,
-        PostChannelEnum.TELEGRAM: TelegramSender,
+        MessengerEnum.DISCORD: DiscordSender,
+        MessengerEnum.TELEGRAM: TelegramSender,
     }
 
     def __init__(self, channel: Channel) -> None:
@@ -191,3 +222,6 @@ class Sender:
 
     def send_message(self, channel_id: int, post: Post, **kwargs) -> Any:
         return self.sender.send_message(channel_id, post, **kwargs)
+
+    def prepare_kwargs(self, **kwargs) -> dict:
+        return self.sender.prepare_kwargs(**kwargs)

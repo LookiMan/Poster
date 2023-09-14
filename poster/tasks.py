@@ -1,3 +1,5 @@
+from telebot.types import Message as TelegramMessage
+
 from .enums import TaskTypeEnum
 from .models import Post
 from .models import PostMessage
@@ -93,26 +95,24 @@ def send_post_task(self, post_pk: int, *, disable_notification: bool) -> None:
 
         try:
             sender = Sender(channel)
-            kwargs = {
-                'disable_notification': disable_notification,
-                'parse_mode': 'MarkdownV2',
-            }
+            kwargs = sender.prepare_kwargs(
+                disable_notification=disable_notification,
+                parse_mode='MarkdownV2',
+            )
             response = sender.send_message(channel.channel_id, post, **kwargs)
         except Exception as e:
             logger.exception(e)
             task.exception = e
         else:
             task.response = response
-            response_messages = response if isinstance(response, list) else [response]
-            for response_message in response_messages:
+            response = response if isinstance(response, list) else [response]
+
+            for message in response:
                 message = PostMessage(
                     channel_id=channel.pk,
-                    message_id=response_message.message_id,
+                    message_id=message.message_id if isinstance(message, TelegramMessage) else message.id,
                 )
                 message.save()
-
-                post = Post.objects.get(pk=post.pk)
-                if post:
-                    post.messages.add(message)
+                post.messages.add(message)
 
         task.save()

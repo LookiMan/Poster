@@ -1,7 +1,7 @@
 from re import search
 
 from discord import SyncWebhook
-from discord.types.webhook import Webhook
+from discord import SyncWebhookMessage
 from requests import Session
 
 
@@ -15,13 +15,21 @@ class DiscordBot:
         self.webhook_token = data['token']
 
     def client(self, chat_id: int) -> SyncWebhook:
-        data: Webhook = {
+        data = {
             'id': self.webhook_id,
             'token': self.webhook_token,
             'type': 1,
             'channel_id': chat_id,
         }
-        return SyncWebhook(data, session=Session())
+        return SyncWebhook(data, session=Session())  # type: ignore
+        # TODO: From correct type need use 'data: Webhook = {...'
+        # But, can't import Webhook from discord.types.webhook (circular import)
 
-    def send_message(self, chat_id: int, message: str, *args, **kwargs) -> None:
-        self.client(chat_id).send(message)
+    def delete_message(self, chat_id: int, message_id: int) -> None:
+        return self.client(chat_id).delete_message(message_id)
+
+    def edit_message(self, chat_id: int, message_id: int, **kwargs) -> SyncWebhookMessage:
+        return self.client(chat_id).edit_message(message_id, **kwargs)
+
+    def send_message(self, chat_id: int, message: str, **kwargs) -> SyncWebhookMessage:
+        return self.client(chat_id).send(message, wait=True, **kwargs)

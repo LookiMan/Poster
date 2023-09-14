@@ -48,6 +48,9 @@ def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwarg
     if not created:
         return
 
+    if not instance.is_completed:
+        return
+
     if not instance.bot:
         raise BotNotSetException(f'Bot not set from channel with id {instance.pk}')
 
@@ -62,10 +65,9 @@ def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwarg
 
         if info.photo:
             file_id = info.photo.small_file_id
-
-            instance.image.name = file_id
             content = bot.download_file_from_telegram(file_id)
             if content:
+                instance.image.name = file_id
                 save_file(file_id, content)
 
     instance.save()
