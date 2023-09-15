@@ -1,16 +1,16 @@
 from abc import abstractmethod
 from abc import ABC
-from typing import Any
 from typing import List
 from io import BytesIO
 from os import path
 from os import getenv
 
 from django.db.models import QuerySet
-from discord import SyncWebhookMessage as DiscordMessage
 from requests.exceptions import RequestException
 from telebot.apihelper import ApiTelegramException
+from telebot.types import Chat as TelegramChat
 from telebot.types import Message as TelegramMessage
+from telebot.types import User as TelegramUser
 from telebot.types import InputMediaDocument
 from telebot.types import InputMediaPhoto
 
@@ -18,7 +18,6 @@ from .enums import MessengerEnum
 from .exceptions import SenderNotFound
 from .exceptions import UnknownPostType
 from .models import Bot
-from .models import Channel
 from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
@@ -26,10 +25,18 @@ from .utils import escape_discord_message
 from .utils import escape_telegram_message
 
 from discord_bot import DiscordBot
+from discord_bot import Channel as DiscordChannel
+from discord_bot import Message as DiscordMessage
+from discord_bot import User as DiscordUser
 from telegram_bot import TelegramBot
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+SenderChannel = TelegramChat | DiscordChannel
+SenderMessage = TelegramMessage | DiscordMessage
+SenderUser = TelegramUser | DiscordUser
 
 
 class AbstractSender(ABC):
@@ -38,21 +45,27 @@ class AbstractSender(ABC):
         pass
 
     @abstractmethod
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> DiscordMessage | TelegramMessage:  # NOQA: E501
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> TelegramMessage:
         pass
 
     @abstractmethod
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> DiscordMessage | TelegramMessage:
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> TelegramMessage:
         pass
 
     @abstractmethod
     def prepare_kwargs(self, **kwargs) -> dict:
         pass
 
+    def get_channel_info(self, channel_id: int) -> SenderChannel:
+        return self.bot.get_channel_info(channel_id)  # type: ignore
+
+    def get_me(self) -> SenderUser:
+        return self.bot.get_me()  # type: ignore
+
 
 class DiscordSender(AbstractSender):
     def __init__(self, bot: Bot) -> None:
-        self.bot = DiscordBot(bot.webhook)
+        self.bot = DiscordBot(bot.token)
 
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         try:
@@ -68,10 +81,10 @@ class DiscordSender(AbstractSender):
             'deleted': status,
         }
 
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> DiscordMessage:
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs):
         return self.bot.edit_message(channel_id, message_id, content=post.message, **kwargs)
 
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> DiscordMessage:
+    def send_message(self, channel_id: int, post: Post, **kwargs):
         message = escape_discord_message(post.message)
         return self.bot.send_message(channel_id, message, **kwargs)
 
@@ -200,28 +213,34 @@ class TelegramSender(AbstractSender):
         return kwargs
 
 
-class Sender:
+class Sender(AbstractSender):
     senders = {
         MessengerEnum.DISCORD: DiscordSender,
         MessengerEnum.TELEGRAM: TelegramSender,
     }
 
-    def __init__(self, channel: Channel) -> None:
-        sender = self.senders.get(channel.channel_type)  # type: ignore
+    def __init__(self, bot: Bot) -> None:
+        sender = self.senders.get(bot.bot_type)  # type: ignore
 
         if not sender:
-            raise SenderNotFound(f'Not found sender for channel with type {channel.channel_type}')
+            raise SenderNotFound(f'Not found sender for channel with type {bot.bot_type}')
 
-        self.sender = sender(channel.bot)
+        self.sender = sender(bot)
 
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         return self.sender.delete_message(channel_id, message_id, **kwargs)
 
-    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> Any:
+    def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> SenderMessage:
         return self.sender.edit_message(channel_id, message_id, post, **kwargs)
 
-    def send_message(self, channel_id: int, post: Post, **kwargs) -> Any:
+    def send_message(self, channel_id: int, post: Post, **kwargs) -> SenderMessage:
         return self.sender.send_message(channel_id, post, **kwargs)
 
     def prepare_kwargs(self, **kwargs) -> dict:
         return self.sender.prepare_kwargs(**kwargs)
+
+    def get_channel_info(self, channel_id: int) -> SenderChannel:
+        return self.sender.get_channel_info(channel_id)
+
+    def get_me(self) -> SenderUser:
+        return self.sender.get_me()

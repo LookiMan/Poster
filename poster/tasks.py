@@ -1,5 +1,3 @@
-from telebot.types import Message as TelegramMessage
-
 from .enums import TaskTypeEnum
 from .models import Post
 from .models import PostMessage
@@ -19,7 +17,7 @@ def delete_message(self, message: PostMessage) -> None:
     )
 
     try:
-        sender = Sender(message.channel)
+        sender = Sender(message.channel.bot)
         task.response = sender.delete_message(message.channel.channel_id, message.message_id)
     except Exception as e:
         logger.exception(e)
@@ -64,7 +62,7 @@ def edit_post_task(self, post_pk: int) -> None:
         )
 
         try:
-            sender = Sender(message.channel)
+            sender = Sender(message.channel.bot)
             task.response = sender.edit_message(
                 message.channel.channel_id,
                 message.message_id,
@@ -94,7 +92,7 @@ def send_post_task(self, post_pk: int, *, disable_notification: bool) -> None:
         )
 
         try:
-            sender = Sender(channel)
+            sender = Sender(channel.bot)
             kwargs = sender.prepare_kwargs(
                 disable_notification=disable_notification,
                 parse_mode='MarkdownV2',
@@ -110,7 +108,7 @@ def send_post_task(self, post_pk: int, *, disable_notification: bool) -> None:
             for message in response:
                 message = PostMessage(
                     channel_id=channel.pk,
-                    message_id=message.message_id if isinstance(message, TelegramMessage) else message.id,
+                    message_id=message.message_id,
                 )
                 message.save()
                 post.messages.add(message)

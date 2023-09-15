@@ -1,13 +1,10 @@
 {
-    "include": [
-        "./poster/sender.py",
-        "./poster/signals.py",
-        "./poster/tasks.py",
-        "./poster/models.py",
-        "./poster/mixins.py",
-        "./poster/utils.py",
-        "./discord_bot/bot.py",
-        "./telegram_bot/bot.py",
+    "exclude": [
+        "**/config/**",
+        "**/tests/**",
+        "**/admin.py",
+        "**/forms.py",
+        
     ],
     "reportMissingTypeStubs": false,
     "useLibraryCodeForTypes": false,

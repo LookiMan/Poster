@@ -42,20 +42,13 @@ class BotAdmin(ModelAdmin):
     form = BotAdminForm
 
     list_display = (
-        'bot_type',
         'username',
-        'preview',
+        'bot_type',
+        'token_preview',
     )
 
     def get_user_fields(self, request, obj=None):
-        fields = ['bot_type', 'token', 'webhook']
-        if obj:
-            if obj.bot_type == MessengerEnum.DISCORD:
-                fields.remove('token')
-            elif obj.bot_type == MessengerEnum.TELEGRAM:
-                fields.remove('webhook')
-
-        return fields
+        return ['bot_type', 'token']
 
     def get_auto_fields(self, request, obj=None):
         if not obj:
@@ -74,13 +67,7 @@ class BotAdmin(ModelAdmin):
         readonly_files = ['username']
 
         if obj:
-            readonly_files.append('bot_type')
-
-            if obj.bot_type == MessengerEnum.DISCORD:
-                readonly_files.append('webhook')
-
-            elif obj.bot_type == MessengerEnum.TELEGRAM:
-                readonly_files.append('token')
+            readonly_files.extend(['bot_type', 'token'])
 
         return (*self.readonly_fields, *readonly_files)
 
@@ -97,21 +84,10 @@ class BotAdmin(ModelAdmin):
         extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
-    def preview(self, obj):
-        if obj.bot_type == MessengerEnum.DISCORD:
-            return f'Webhook: {"*" * len(obj.webhook[:-4])}{obj.webhook[-4:]}'
-        elif obj.bot_type == MessengerEnum.TELEGRAM:
-            return f'Token: {"*" * len(obj.token[:-4])}{obj.token[-4:]}'
-        else:
-            return str(
-                _('Unknown bot type: {bot_type}').format(obj.bot_type)
-            )
-
-    class Media:
-        js = (
-            'assets/vendor/js/jquery-3.7.0.min.js',
-            'assets/js/admin/bot-add.js',
-        )
+    def token_preview(self, obj):
+        if not obj.token:
+            return 'Token: -'
+        return f'Token: {"*" * len(obj.token[:-4])}{obj.token[-4:]}'
 
 
 @register(Channel)
@@ -120,11 +96,10 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
     form = ChannelAdminForm
 
     list_display = (
-        'channel_type',
         'title',
+        'channel_type',
         'username',
         'description',
-        'invite_link',
         'is_completed',
     )
 
@@ -142,14 +117,19 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
         return fields
 
     def get_auto_fields(self, request, obj=None):
+        fields = []
+
         if not obj:
-            return []
-        return [
-            'title',
-            'username',
-            'description',
-            'invite_link',
-        ]
+            return fields
+
+        if obj and obj.is_completed:
+            fields.extend([
+                'title',
+                'username',
+                'description',
+            ])
+
+        return fields
 
     def get_fieldsets(self, request, obj=None):
         return [
@@ -164,7 +144,6 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
             'title',
             'username',
             'description',
-            'invite_link',
         ]
 
         if obj and obj.channel_type:
@@ -306,7 +285,7 @@ class PostAdmin(ModelAdmin):
 
     def messages_links(self, obj):
         template = '''
-        <a class="list-group-item list-group-item-action" href="{href}}">
+        <a class="list-group-item list-group-item-action" href="{href}">
             View message in channel @{channel_username}
         </a>
         '''

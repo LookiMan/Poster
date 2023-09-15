@@ -33,24 +33,13 @@ class Bot(BaseMixin):
     )
 
     token: CharField = CharField(
-        null=True,
-        blank=True,
         max_length=255,
-        verbose_name=_('Telegram bot token'),
+        verbose_name=_('Bot token'),
         help_text=_(
             'Create a Telegram bot using @BotFather and copy the received token into this field.<br>'
-            'Token example: 0123456789:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-        ),
-    )
-
-    webhook: CharField = CharField(
-        null=True,
-        blank=True,
-        max_length=255,
-        verbose_name=_('Discord webhook'),
-        help_text=_(
-            'Create a Discord webhook using Server Settings > Integrations > Webhooks.<br>'
-            'Webhook example: https://discord.com/api/webhooks/your-webhook-id/your-webhook-token'
+            'Token example: 0123456789:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX<br><br>'
+            'Create a Discord bot using Developers > Applications > New Application.<br>'
+            'Token example: XXXXXXXXXXXXXXXXXXXXXXXXXX.XXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
         ),
     )
 
@@ -62,7 +51,7 @@ class Bot(BaseMixin):
     )
 
     def __str__(self) -> str:
-        return f'@{self.username}'
+        return self.username or str(_('Bot username not set'))
 
     class Meta:
         ordering = ['-created_at']
@@ -105,7 +94,7 @@ class Channel(BaseMixin, ImageMixin):
         max_length=255,
         null=True,
         blank=True,
-        verbose_name=_('Channel name'),
+        verbose_name=_('Channel title'),
         help_text=_('Name retrieved automatically via API'),
     )
 
@@ -121,13 +110,6 @@ class Channel(BaseMixin, ImageMixin):
         blank=True,
         verbose_name=_('Channel username'),
         help_text=_('Username retrieved automatically via API'),
-    )
-
-    invite_link: CharField = CharField(
-        null=True,
-        blank=True,
-        verbose_name=_('Channel link'),
-        help_text=_('Link retrieved automatically via API'),
     )
 
     is_completed: BooleanField = BooleanField(
@@ -210,28 +192,28 @@ class Post(BaseMixin, ChannelsMixin):
         blank=True,
         null=True,
         verbose_name=_('Document file'),
-        help_text=_(''),
+        help_text=_('Select a document file to send'),
     )
 
     video: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Video file'),
-        help_text=_(''),
+        help_text=_('Select a video file to send'),
     )
 
     photo: ImageField = ImageField(
         blank=True,
         null=True,
         verbose_name=_('Photo file'),
-        help_text=_(''),
+        help_text=_('Select a photo file to send'),
     )
 
     voice: FileField = FileField(
         blank=True,
         null=True,
         verbose_name=_('Voice file'),
-        help_text=_(''),
+        help_text=_('Select a audio file to send'),
     )
 
     caption: FroalaField = FroalaField(
@@ -298,10 +280,10 @@ class PostMessage(BaseMixin):
         channel = self.channel
         if not channel:
             return '#'
-        if channel.channel_type == MessengerEnum.DISCORD:
+        elif channel.channel_type == MessengerEnum.DISCORD:
             return f'https://discord.com/channels/{channel.server_id}/{channel.channel_id}/{self.message_id}'
         elif channel.channel_type == MessengerEnum.TELEGRAM:
-            return f'https://t.me/{channel.channel_username}/{self.message_id}'
+            return f'https://t.me/{channel.username}/{self.message_id}'
         else:
             return '#'
 

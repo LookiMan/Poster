@@ -9,7 +9,7 @@ from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from froala_editor.widgets import FroalaEditor
-
+from munch import munchify
 from telebot.apihelper import ApiTelegramException
 
 from .enums import MessengerEnum
@@ -21,7 +21,8 @@ from .models import GalleryDocument
 from .models import GalleryPhoto
 from .models import Post
 
-from discord_bot import DiscordBot # NOQA
+from discord_bot import ApiDiscordException
+from discord_bot import DiscordBot
 from telegram_bot import TelegramBot
 
 import logging
@@ -38,84 +39,77 @@ class InlineFroalaEditor(FroalaEditor):
 
 
 class BotAdminForm(ModelForm):
+    messages = munchify({
+        'discord_token_error': _('Unable to retrieve bot telegram data for this token'),
+        'telegram_token_error': _('Unable to retrieve bot discord data for this token'),
+        'unknown_bot_type': _('Unknown bot type specified')
+    })
 
     class Meta:
         model = Bot
         fields = '__all__'
 
-    def _validate_discord_fields(self, cleaned_data: dict) -> None:
-        pass
+    def _validate_discord_token(self, token: str) -> None:
+        try:
+            DiscordBot(token).get_me()
+        except ApiDiscordException:
+            raise ValidationError(self.messages.discord_token_error)
 
-    def _validate_telegram_fields(self, cleaned_data: dict) -> None:
-        token = cleaned_data.get('token')
-
-        if not token:
-            raise ValidationError(
-                _('Telegram bot token field is required')
-            )
-
+    def _validate_telegram_token(self, token: str) -> None:
         try:
             TelegramBot(token).get_me()
         except ApiTelegramException:
-            raise ValidationError(
-                _('Unable to retrieve bot telegram data for this token')
-            )
+            raise ValidationError(self.messages.telegram_token_error)
 
     def clean(self):
         cleaned_data = super().clean()
+        if not self.is_valid():
+            return
+
         bot_type = cleaned_data.get('bot_type')
+        token = cleaned_data.get('token')
 
         if bot_type == MessengerEnum.DISCORD:
-            self._validate_discord_fields(cleaned_data)
+            self._validate_discord_token(token)
         elif bot_type == MessengerEnum.TELEGRAM:
-            self._validate_telegram_fields(cleaned_data)
+            self._validate_telegram_token(token)
         else:
-            raise ValidationError(
-                _('Unknown bot type specified')
-            )
+            raise ValidationError(self.messages.unknown_bot_type)
 
 
 class ChannelAdminForm(ModelForm):
+    messages = munchify({
+        'channel_id_required': _('Channel id field is required'),
+        'channel_id_error': _(
+            'Check the correctness of the specified Channel ID or '
+            'make sure that the bot is added to the channel with administrator rights'
+        ),
+    })
 
     class Meta:
         model = Channel
         fields = '__all__'
 
-    def _validate_discord_fields(self, cleaned_data: dict) -> None:
-        pass
+    def _validate_discord_fields(self) -> None:
+        if not DiscordBot(self.bot.token).is_channel_with_id_exists(self.channel_id):
+            raise ValidationError(self.messages.channel_id_error)
 
-    def _validate_telegram_fields(self, cleaned_data: dict) -> None:
-        bot = cleaned_data.get('bot')
-        channel_id = cleaned_data.get('channel_id')
-
-        if bot and not channel_id:
-            raise ValidationError(
-                _('Channel id field is required')
-            )
-        elif channel_id and (not channel_id < 0 or len(str(channel_id)) < 12):
-            raise ValidationError(
-                _('Not valid Channel ID given. For example: -100000000000')
-            )
-        elif bot and channel_id and not TelegramBot(bot.token).is_channel_with_id_exists(channel_id):
-            raise ValidationError(
-                _(
-                    'Check the correctness of the specified Channel ID or '
-                    'make sure that the bot is added to the channel with administrator rights'
-                )
-            )
+    def _validate_telegram_fields(self) -> None:
+        if not TelegramBot(self.bot.token).is_channel_with_id_exists(self.channel_id):
+            raise ValidationError(self.messages.channel_id_error)
 
     def clean(self):
         cleaned_data = super().clean()
-        channel_type = cleaned_data.get('channel_type')
+        self.bot = cleaned_data.get('bot')
+        self.channel_id = cleaned_data.get('channel_id')
 
-        if channel_type == MessengerEnum.DISCORD:
-            self._validate_discord_fields(cleaned_data)
-        elif channel_type == MessengerEnum.TELEGRAM:
-            self._validate_telegram_fields(cleaned_data)
-        else:
-            raise ValidationError(
-                _('Unknown channel type specified')
-            )
+        if self.bot:
+            if not self.channel_id:
+                raise ValidationError(self.messages.channel_id_required)
+            elif self.bot.bot_type == MessengerEnum.DISCORD:
+                self._validate_discord_fields()
+            elif self.channel_type == MessengerEnum.TELEGRAM:
+                self._validate_telegram_fields()
 
 
 class PostAdminForm(ModelForm):
