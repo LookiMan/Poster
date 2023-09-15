@@ -1,8 +1,8 @@
 from .enums import TaskTypeEnum
 from .models import Post
 from .models import PostMessage
-from .sender import Sender
 from .models import Task
+from .sender import Sender
 from config.celery import app
 
 import logging
