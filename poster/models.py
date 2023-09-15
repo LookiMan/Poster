@@ -87,7 +87,7 @@ class Channel(BaseMixin, ImageMixin):
         null=True,
         blank=True,
         verbose_name=_('Discord server id'),
-        help_text=_('Insert your discord server id'),
+        help_text=_('Server (Guild) id retrieved automatically via API'),
     )
 
     title: CharField = CharField(

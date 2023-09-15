@@ -108,7 +108,7 @@ class ChannelAdminForm(ModelForm):
                 raise ValidationError(self.messages.channel_id_required)
             elif self.bot.bot_type == MessengerEnum.DISCORD:
                 self._validate_discord_fields()
-            elif self.channel_type == MessengerEnum.TELEGRAM:
+            elif self.bot.bot_type == MessengerEnum.TELEGRAM:
                 self._validate_telegram_fields()
 
 

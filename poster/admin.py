@@ -9,7 +9,6 @@ from .forms import ChannelAdminForm
 from .forms import GalleryDocumentInlineForm
 from .forms import GalleryPhotoInlineForm
 from .forms import PostAdminForm
-from .enums import MessengerEnum
 from .enums import PostTypeEnum
 from .enums import TaskTypeEnum
 from .mixins import AdminImageMixin
@@ -111,7 +110,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
 
             fields.append('channel_id')
 
-            if obj.channel_type == MessengerEnum.DISCORD:
+            if obj.is_completed and obj.server_id:
                 fields.append('server_id')
 
         return fields
@@ -146,8 +145,12 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
             'description',
         ]
 
-        if obj and obj.channel_type:
-            readonly_files.append('channel_type')
+        if obj:
+            if obj.channel_type:
+                readonly_files.append('channel_type')
+
+            if obj.is_completed:
+                readonly_files.extend(['channel_id', 'server_id'])
 
         return (*self.readonly_fields, *readonly_files)
 
@@ -158,9 +161,11 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
         return super().add_view(request, form_url, extra_context=extra_context)
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
+        model = self.get_object(request, object_id)
         extra_context = extra_context or {}
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
+        extra_context['show_save'] = not model.is_completed
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def get_form(self, request, obj=None, **kwargs):

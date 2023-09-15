@@ -4,10 +4,19 @@ from django.conf import settings
 from markdownify import abstract_inline_conversion
 from markdownify import MarkdownConverter
 
+from telegram_bot import TelegramBot
+
 
 def save_file(name: str, content: bytes) -> None:
     with open(path.join(settings.MEDIA_ROOT, name), mode='wb') as file:
         file.write(content)
+
+
+def download_bot_photo(channel: 'Channel', file_id: str) -> None:  # NOQA: F821 # type: ignore
+    content = TelegramBot(channel.bot).download_file_from_telegram(file_id)
+    if content:
+        channel.image.name = file_id
+        save_file(file_id, content)
 
 
 class BaseMarkdownConverter(MarkdownConverter):
@@ -44,5 +53,5 @@ def escape_discord_message(message: str) -> str:
     return DiscordMarkdownConverter(bullets='-').convert(escape_chars(message))
 
 
-def get_default_telegram_image():
-    return path.join('default', 'telegram_icon.jpg')
+def get_default_channel_image(messenger):
+    return path.join('default', f'{messenger}_channel_icon.png')

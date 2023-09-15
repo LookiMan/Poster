@@ -8,7 +8,7 @@ from django.db.models import Model
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 
-from .utils import get_default_telegram_image
+from .utils import get_default_channel_image
 
 
 class BaseMixin(Model):
@@ -47,7 +47,7 @@ class ImageMixin(Model):
 
     def save(self, *args, **kwargs) -> None:
         if not self.image:
-            self.image.name = get_default_telegram_image()
+            self.image.name = get_default_channel_image(self.channel_type)  # type: ignore
         return super().save(*args, **kwargs)
 
     class Meta:

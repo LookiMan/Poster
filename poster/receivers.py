@@ -16,9 +16,7 @@ from .tasks import delete_message_task
 from .tasks import delete_post_task
 from .tasks import edit_post_task
 from .tasks import send_post_task
-from .utils import save_file
-
-from telegram_bot import TelegramBot
+from .utils import download_bot_photo
 
 import logging
 logger = logging.getLogger(__name__)
@@ -43,30 +41,29 @@ def bot_post_save(sender: Bot, instance: Bot, created: bool, **kwargs) -> None:
 
 @receiver(post_save, sender=Channel)
 def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwargs) -> None:
-    if not created:
+    if instance.is_completed:
         return
 
-    if not instance.is_completed:
+    if not instance.channel_id:
         return
 
     if not instance.bot:
         raise BotNotSetException(f'Bot not set from channel with id {instance.pk}')
 
-    bot = TelegramBot(instance.bot.token)
-    info = bot.get_channel_info(instance.channel_id)
+    sender_api = Sender(instance.bot)
+    info = sender_api.get_channel_info(instance.channel_id)
 
     if info:
         instance.title = info.title
         instance.description = info.description
-        instance.username = info.username
+        instance.is_completed = True
 
-        if info.photo:
-            file_id = info.photo.small_file_id
-            content = bot.download_file_from_telegram(file_id)
-            if content:
-                instance.image.name = file_id
-                save_file(file_id, content)
-
+        if sender_api.is_telegram_sender:
+            instance.username = info.username
+            if info.photo:
+                download_bot_photo(instance, info.photo.small_file_id)
+        else:
+            instance.server_id = info.guild_id
     instance.save()
 
 

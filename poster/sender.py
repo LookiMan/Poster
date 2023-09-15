@@ -57,10 +57,10 @@ class AbstractSender(ABC):
         pass
 
     def get_channel_info(self, channel_id: int) -> SenderChannel:
-        return self.bot.get_channel_info(channel_id)  # type: ignore
+        pass
 
     def get_me(self) -> SenderUser:
-        return self.bot.get_me()  # type: ignore
+        pass
 
 
 class DiscordSender(AbstractSender):
@@ -97,6 +97,12 @@ class DiscordSender(AbstractSender):
         })
 
         return kwargs
+
+    def get_channel_info(self, channel_id: int) -> DiscordChannel:
+        return self.bot.get_channel_info(channel_id)
+
+    def get_me(self) -> DiscordUser:
+        return self.bot.get_me()
 
 
 class TelegramSender(AbstractSender):
@@ -212,6 +218,12 @@ class TelegramSender(AbstractSender):
     def prepare_kwargs(self, **kwargs) -> dict:
         return kwargs
 
+    def get_channel_info(self, channel_id: int) -> TelegramChat:
+        return self.bot.get_channel_info(channel_id)
+
+    def get_me(self) -> TelegramUser:
+        return self.bot.get_me()
+
 
 class Sender(AbstractSender):
     senders = {
@@ -220,12 +232,16 @@ class Sender(AbstractSender):
     }
 
     def __init__(self, bot: Bot) -> None:
-        sender = self.senders.get(bot.bot_type)  # type: ignore
+        sender = self.senders.get(bot.bot_type)
 
         if not sender:
             raise SenderNotFound(f'Not found sender for channel with type {bot.bot_type}')
 
         self.sender = sender(bot)
+
+    @property
+    def is_telegram_sender(self):
+        return isinstance(self.sender, TelegramSender)
 
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         return self.sender.delete_message(channel_id, message_id, **kwargs)
