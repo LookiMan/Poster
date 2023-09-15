@@ -1,35 +1,64 @@
-from re import search
-
-from discord import SyncWebhook
-from discord import SyncWebhookMessage
 from requests import Session
+
+from .exceptions import ApiDiscordException
+from .types import Channel
+from .types import Message
+from .types import User
 
 
 class DiscordBot:
-    def __init__(self, webhook: str) -> None:
-        data = search(r'discord(?:app)?\.com/api/webhooks/(?P<id>[0-9]{17,20})/(?P<token>[A-Za-z0-9\.\-\_]{60,})', webhook) # NOQA
-        if data is None:
-            raise ValueError('Invalid webhook URL given.')
 
-        self.webhook_id = data['id']
-        self.webhook_token = data['token']
+    def __init__(self, token: str) -> None:
+        self.token = token
 
-    def client(self, chat_id: int) -> SyncWebhook:
-        data = {
-            'id': self.webhook_id,
-            'token': self.webhook_token,
-            'type': 1,
-            'channel_id': chat_id,
+        if not self.token:
+            raise Exception('Token must be not empty')
+
+        self.session = Session()
+
+    def _api(self, path: str, method: str = 'GET', **kwargs) -> dict:
+        path = path if path.startswith('/') else '/' + path
+        headers = {
+            'Authorization': f'Bot {self.token}',
         }
-        return SyncWebhook(data, session=Session())  # type: ignore
-        # TODO: From correct type need use 'data: Webhook = {...'
-        # But, can't import Webhook from discord.types.webhook (circular import)
 
-    def delete_message(self, chat_id: int, message_id: int) -> None:
-        return self.client(chat_id).delete_message(message_id)
+        response = self.session.request(
+            method,
+            f'https://discord.com/api/v10{path}',
+            headers=headers,
+            **kwargs,
+        )
 
-    def edit_message(self, chat_id: int, message_id: int, **kwargs) -> SyncWebhookMessage:
-        return self.client(chat_id).edit_message(message_id, **kwargs)
+        if response.status_code not in range(200, 300):
+            raise ApiDiscordException(response.reason)
 
-    def send_message(self, chat_id: int, message: str, **kwargs) -> SyncWebhookMessage:
-        return self.client(chat_id).send(message, wait=True, **kwargs)
+        if response.status_code != 204:
+            return response.json()
+        return {}
+
+    def get_me(self) -> User:
+        return User(self._api('/users/@me'))
+
+    def get_channel_info(self, channel_id: int) -> Channel:
+        return Channel(self._api(f'/channels/{channel_id}'))
+
+    def is_channel_with_id_exists(self, channel_id: int) -> bool:
+        try:
+            return self.get_channel_info(channel_id) is not None
+        except ApiDiscordException:
+            return False
+
+    def delete_message(self, channel_id: int, message_id: int) -> None:
+        self._api(f'/channels/{channel_id}/messages/{message_id}', 'DELETE')
+
+    def edit_message(self, channel_id: int, message_id: int, message, **kwargs):
+        json = {
+            'content': message,
+        }
+        self._api(f'/channels/{channel_id}/messages', 'PATCH', json=json)
+
+    def send_message(self, channel_id: int, message: str, **kwargs) -> Message:
+        json = {
+            'content': message,
+        }
+        return Message(self._api(f'/channels/{channel_id}/messages', 'POST', json=json))

@@ -1,0 +1,4 @@
+
+
+class ApiDiscordException(Exception):
+    pass
