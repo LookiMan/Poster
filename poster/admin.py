@@ -343,6 +343,12 @@ class PostAdmin(ModelAdmin):
     post_channels.allow_tags = True
     post_channels.short_description = _('Post channels')
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj:
+            form.base_fields['channels'].queryset = Channel.objects.filter(is_completed=True)
+        return form
+
 
 @register(Task)
 class TaskAdmin(ModelAdmin):
