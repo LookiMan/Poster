@@ -52,10 +52,6 @@ class AbstractSender(ABC):
     def send_message(self, channel_id: int, post: Post, **kwargs) -> TelegramMessage:
         pass
 
-    @abstractmethod
-    def prepare_kwargs(self, **kwargs) -> dict:
-        pass
-
     def get_channel_info(self, channel_id: int) -> SenderChannel:
         pass
 
@@ -87,16 +83,6 @@ class DiscordSender(AbstractSender):
     def send_message(self, channel_id: int, post: Post, **kwargs):
         message = escape_discord_message(post.message)
         return self.bot.send_message(channel_id, message, **kwargs)
-
-    def prepare_kwargs(self, **kwargs) -> dict:
-        disable_notification = kwargs.pop('disable_notification', False)
-
-        kwargs.pop('parse_mode', None)
-        kwargs.update({
-            'silent': disable_notification
-        })
-
-        return kwargs
 
     def get_channel_info(self, channel_id: int) -> DiscordChannel:
         return self.bot.get_channel_info(channel_id)
@@ -185,6 +171,7 @@ class TelegramSender(AbstractSender):
         }
 
     def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs) -> List[TelegramMessage]:
+        kwargs.update({'parse_mode': 'MarkdownV2'})
         message = escape_telegram_message(post.message or post.caption)
 
         if post.message:
@@ -193,30 +180,28 @@ class TelegramSender(AbstractSender):
         return self.bot.edit_message_caption(channel_id, message_id, caption=message, **kwargs)
 
     def send_message(self, channel_id: int, post: Post, **kwargs) -> List[TelegramMessage] | TelegramMessage:
-        message = escape_telegram_message(post.message or post.caption)
-
-        if post.audio:
-            return self._send_audio(channel_id, post.audio, caption=message, **kwargs)
-        elif post.document:
-            return self._send_document(channel_id, post.document, caption=message, **kwargs)
-        elif post.gallery_documents:
-            kwargs.pop('parse_mode', None)  # TODO:
+        if post.gallery_documents:
             return self._send_gallery_documents(channel_id, post.gallery_documents.all(), **kwargs)
         elif post.gallery_photos:
-            kwargs.pop('parse_mode', None)  # TODO:
             return self._send_gallery_photos(channel_id, post.gallery_photos.all(), **kwargs)
-        elif post.message:
-            return self._send_message(channel_id, message, **kwargs)
-        elif post.photo:
-            return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
-        elif post.video:
-            return self._send_video(channel_id, post.video, caption=message, **kwargs)
-        elif post.voice:
-            return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
-        raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
+        else:
+            kwargs.update({'parse_mode': 'MarkdownV2'})
+            message = escape_telegram_message(post.message or post.caption)
 
-    def prepare_kwargs(self, **kwargs) -> dict:
-        return kwargs
+            if post.audio:
+                return self._send_audio(channel_id, post.audio, caption=message, **kwargs)
+            elif post.document:
+                return self._send_document(channel_id, post.document, caption=message, **kwargs)
+            elif post.message:
+                return self._send_message(channel_id, message, **kwargs)
+            elif post.photo:
+                return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
+            elif post.video:
+                return self._send_video(channel_id, post.video, caption=message, **kwargs)
+            elif post.voice:
+                return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
+
+        raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
 
     def get_channel_info(self, channel_id: int) -> TelegramChat:
         return self.bot.get_channel_info(channel_id)
@@ -251,9 +236,6 @@ class Sender(AbstractSender):
 
     def send_message(self, channel_id: int, post: Post, **kwargs) -> SenderMessage:
         return self.sender.send_message(channel_id, post, **kwargs)
-
-    def prepare_kwargs(self, **kwargs) -> dict:
-        return self.sender.prepare_kwargs(**kwargs)
 
     def get_channel_info(self, channel_id: int) -> SenderChannel:
         return self.sender.get_channel_info(channel_id)

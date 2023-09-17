@@ -235,6 +235,11 @@ class Post(BaseMixin, ChannelsMixin):
         verbose_name=_('Is published')
     )
 
+    is_silent: BooleanField = BooleanField(
+        default=False,
+        verbose_name=_('Is silent')
+    )
+
     messages: ManyToManyField = ManyToManyField(
         'PostMessage',
         verbose_name=_('Messages'),

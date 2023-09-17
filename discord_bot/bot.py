@@ -59,6 +59,11 @@ class DiscordBot:
 
     def send_message(self, channel_id: int, message: str, **kwargs) -> Message:
         json = {
-            'content': message,
+            'content': message
         }
+
+        disable_notification = kwargs.pop('disable_notification', False)
+        if disable_notification:
+            json.update({'flags': 4096})  # type: ignore
+
         return Message(self._api(f'/channels/{channel_id}/messages', 'POST', json=json))

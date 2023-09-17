@@ -277,10 +277,12 @@ class PostAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         if form.data.get('_save_and_publish'):
             obj.is_published = True
+            obj.is_silent = False
             publish_post_signal.send(sender=request, instance=obj)
         elif form.data.get('_save_and_publish_silently'):
             obj.is_published = True
-            publish_post_signal.send(sender=request, instance=obj, disable_notification=True)
+            obj.is_silent = True
+            publish_post_signal.send(sender=request, instance=obj)
         elif form.data.get('_save_and_unpublish'):
             obj.is_published = False
             unpublish_post_signal.send(sender=request, instance=obj)

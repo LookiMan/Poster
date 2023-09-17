@@ -75,15 +75,15 @@ def post_model_pre_delete(sender: Post, instance: Post, **kwargs) -> None:
 
 @receiver(publish_post_signal)
 def publish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
-    disable_notification = kwargs.get('disable_notification', False)
+    if not instance.channels.all():
+        return
+    send_post_task.delay(instance.pk, disable_notification=instance.is_silent)
 
-    if instance.channels.all():
-        send_post_task.delay(instance.pk, disable_notification=disable_notification)
-    else:
-        @receiver(m2m_changed, sender=Post.channels.through, dispatch_uid='0001')
-        def related_models_changed(sender, instance, action, **kwargs):
-            if action == 'post_add':
-                send_post_task.delay(instance.pk, disable_notification=disable_notification)
+
+@receiver(m2m_changed, sender=Post.channels.through)
+def related_models_changed(sender, instance, action, **kwargs):
+    if action == 'post_add':
+        send_post_task.delay(instance.pk, disable_notification=instance.is_silent)
 
 
 @receiver(unpublish_post_signal)

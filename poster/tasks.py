@@ -93,11 +93,7 @@ def send_post_task(self, post_pk: int, *, disable_notification: bool) -> None:
 
         try:
             sender = Sender(channel.bot)
-            kwargs = sender.prepare_kwargs(
-                disable_notification=disable_notification,
-                parse_mode='MarkdownV2',
-            )
-            response = sender.send_message(channel.channel_id, post, **kwargs)
+            response = sender.send_message(channel.channel_id, post, disable_notification=disable_notification)
         except Exception as e:
             logger.exception(e)
             task.exception = e
