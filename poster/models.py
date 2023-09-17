@@ -282,15 +282,25 @@ class PostMessage(BaseMixin):
 
     @property
     def href(self) -> str:
-        channel = self.channel
-        if not channel:
+        if not self.channel:
             return '#'
-        elif channel.channel_type == MessengerEnum.DISCORD:
-            return f'https://discord.com/channels/{channel.server_id}/{channel.channel_id}/{self.message_id}'
-        elif channel.channel_type == MessengerEnum.TELEGRAM:
-            return f'https://t.me/{channel.username}/{self.message_id}'
+        elif self.channel.channel_type == MessengerEnum.DISCORD:
+            return f'https://discord.com/channels/{self.channel.server_id}/{self.channel.channel_id}/{self.message_id}'  # NOQA: E501
+        elif self.channel.channel_type == MessengerEnum.TELEGRAM:
+            return f'https://t.me/{self.channel.username}/{self.message_id}'
         else:
             return '#'
+
+    @property
+    def channel_name(self) -> str:
+        if not self.channel:
+            return '-/-'
+        elif self.channel.channel_type == MessengerEnum.DISCORD:
+            return f'<strong>discord</strong> {_("channel")} <strong>{self.channel.title}</strong>'
+        elif self.channel.channel_type == MessengerEnum.TELEGRAM:
+            return f'<strong>telegram</strong> {_("channel")} <strong>@{self.channel.username}</strong>'
+        else:
+            return '-/-'
 
     def __str__(self) -> str:
         return f'Channel message id: {self.message_id}'

@@ -184,6 +184,7 @@ class PostAdmin(ModelAdmin):
         'post_type',
         'is_published',
         'post_content',
+        'post_channels',
         'created_at',
         'updated_at',
     )
@@ -293,13 +294,13 @@ class PostAdmin(ModelAdmin):
     def messages_links(self, obj):
         template = '''
         <a class="list-group-item list-group-item-action" href="{href}">
-            View message in channel @{channel_username}
+            View message in channel {channel}
         </a>
         '''
 
         return mark_safe('<ul class="list-group">{}</ul>'.format(
             ''.join([
-                template.format(href=message.href, channel_username=message.channel.username)
+                template.format(href=message.href, channel=message.channel_name)
                 for message in obj.messages.all() if message.channel and message.message_id
             ])
         ))
@@ -335,6 +336,12 @@ class PostAdmin(ModelAdmin):
 
     post_content.allow_tags = True
     post_content.short_description = _('Post content')
+
+    def post_channels(self, obj):
+        return mark_safe('<br>'.join([str(channel) for channel in obj.channels.all()]))
+
+    post_channels.allow_tags = True
+    post_channels.short_description = _('Post channels')
 
 
 @register(Task)
