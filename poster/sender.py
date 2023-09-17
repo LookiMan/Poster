@@ -78,7 +78,8 @@ class DiscordSender(AbstractSender):
         }
 
     def edit_message(self, channel_id: int, message_id: int, post: Post, **kwargs):
-        return self.bot.edit_message(channel_id, message_id, content=post.message, **kwargs)
+        message = escape_discord_message(post.message)
+        return self.bot.edit_message(channel_id, message_id, message=message, **kwargs)
 
     def send_message(self, channel_id: int, post: Post, **kwargs):
         message = escape_discord_message(post.message)

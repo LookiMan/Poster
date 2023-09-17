@@ -51,11 +51,11 @@ class DiscordBot:
     def delete_message(self, channel_id: int, message_id: int) -> None:
         self._api(f'/channels/{channel_id}/messages/{message_id}', 'DELETE')
 
-    def edit_message(self, channel_id: int, message_id: int, message, **kwargs):
+    def edit_message(self, channel_id: int, message_id: int, message, **kwargs) -> Message:
         json = {
             'content': message,
         }
-        self._api(f'/channels/{channel_id}/messages', 'PATCH', json=json)
+        return Message(self._api(f'/channels/{channel_id}/messages/{message_id}', 'PATCH', json=json))
 
     def send_message(self, channel_id: int, message: str, **kwargs) -> Message:
         json = {
