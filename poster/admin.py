@@ -345,7 +345,7 @@ class PostAdmin(ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        if obj:
+        if form and form.base_fields.get('channels'):
             form.base_fields['channels'].queryset = Channel.objects.filter(is_completed=True)
         return form
 
