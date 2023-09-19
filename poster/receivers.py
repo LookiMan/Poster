@@ -75,7 +75,7 @@ def post_model_pre_delete(sender: Post, instance: Post, **kwargs) -> None:
 
 @receiver(publish_post_signal)
 def publish_post_signal_handler(sender: WSGIRequest, instance: Post, **kwargs) -> None:
-    if not instance.channels.all():
+    if not instance.channels.count():
         return
     send_post_task.delay(instance.pk, disable_notification=instance.is_silent)
 
