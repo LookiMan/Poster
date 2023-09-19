@@ -1,3 +1,5 @@
+from json import dumps
+
 from requests import Session
 
 from .exceptions import ApiDiscordException
@@ -22,6 +24,10 @@ class DiscordBot:
             'Authorization': f'Bot {self.token}',
         }
 
+        ext_headers = kwargs.pop('headers', None)
+        if ext_headers:
+            headers.update(ext_headers)
+
         response = self.session.request(
             method,
             f'https://discord.com/api/v10{path}',
@@ -30,11 +36,41 @@ class DiscordBot:
         )
 
         if response.status_code not in range(200, 300):
-            raise ApiDiscordException(response.reason)
+            raise ApiDiscordException(response.text)
 
         if response.status_code != 204:
             return response.json()
         return {}
+
+    def _send_message(self, channel_id: int, message: str | None = None, **kwargs) -> Message:
+        data = {}
+        payload = {}
+
+        if message:
+            payload.update({'content': str(message)})
+
+        attachments = kwargs.pop('attachments', False)
+        if attachments:
+            payload.update({'attachments': attachments})  # type: ignore
+
+        disable_notification = kwargs.pop('disable_notification', False)
+        if disable_notification:
+            payload.update({'flags': 4096})  # type: ignore
+
+        embeds = kwargs.pop('embeds', False)
+        if embeds:
+            payload.update({'embeds': embeds})  # type: ignore
+
+        files = kwargs.pop('files', None)
+
+        if embeds and files:
+            data.update({'payload_json': (None, dumps(payload), 'application/json')})
+            payload = None
+
+            for index, file in enumerate(files):
+                data.update({f'files[{index}]': file})
+
+        return Message(self._api(f'/channels/{channel_id}/messages', 'POST', json=payload, files=data))
 
     def get_me(self) -> User:
         return User(self._api('/users/@me'))
@@ -57,13 +93,11 @@ class DiscordBot:
         }
         return Message(self._api(f'/channels/{channel_id}/messages/{message_id}', 'PATCH', json=json))
 
+    # def send_document(self, channel_id: int, document: BufferedReader, caption: str, **kwargs):
+    #    return self.send_message(channel_id, caption, files=files, **kwargs)
+
     def send_message(self, channel_id: int, message: str, **kwargs) -> Message:
-        json = {
-            'content': message
-        }
+        return self._send_message(channel_id, message, **kwargs)
 
-        disable_notification = kwargs.pop('disable_notification', False)
-        if disable_notification:
-            json.update({'flags': 4096})  # type: ignore
-
-        return Message(self._api(f'/channels/{channel_id}/messages', 'POST', json=json))
+    def send_media_group(self, channel_id: int, files: list, attachments: list, embeds: list, **kwargs):
+        return self._send_message(channel_id, files=files, embeds=embeds, attachments=attachments, **kwargs)

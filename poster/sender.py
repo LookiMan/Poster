@@ -6,7 +6,6 @@ from os import path
 from os import getenv
 
 from django.db.models import QuerySet
-from requests.exceptions import RequestException
 from telebot.apihelper import ApiTelegramException
 from telebot.types import Chat as TelegramChat
 from telebot.types import Message as TelegramMessage
@@ -28,6 +27,7 @@ from discord_bot import DiscordBot
 from discord_bot import Channel as DiscordChannel
 from discord_bot import Message as DiscordMessage
 from discord_bot import User as DiscordUser
+from discord_bot.exceptions import ApiDiscordException
 from telegram_bot import TelegramBot
 
 import logging
@@ -40,6 +40,15 @@ SenderUser = TelegramUser | DiscordUser
 
 
 class AbstractSender(ABC):
+    def __init__(self) -> None:
+        self.root = getenv('PROJECT_LOCATION', '')
+        if not self.root:
+            raise Exception('PROJECT_LOCATION not set in system environment')
+
+    def _get_path(self, filename: str) -> str:
+        filename = str(filename)[1:] if str(filename).startswith('/') else path.join('media', str(filename))
+        return path.join(self.root, filename)
+
     @abstractmethod
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         pass
@@ -61,13 +70,58 @@ class AbstractSender(ABC):
 
 class DiscordSender(AbstractSender):
     def __init__(self, bot: Bot) -> None:
+        super().__init__()
         self.bot = DiscordBot(bot.token)
+
+    # def _send_document(self, channel_id: int, document: str, *args, **kwargs) -> DiscordMessage:
+    #     with open(self._get_path(document), mode='rb') as file:
+    #         return self.bot.send_document(channel_id, file, *args, **kwargs)
+
+    def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> DiscordMessage:  # NOQA: E501
+        embeds = []
+        attachments = []
+        files = []
+        for index, photo in enumerate(photos):
+            with open(self._get_path(photo.file), mode='rb') as file:
+                attachments.append({
+                    'id': index,
+                    'filename': photo.file.name,
+                })
+                embeds.append({
+                    'description': escape_discord_message(photo.caption) if photo.caption else '',
+                    'image': {
+                        'url': f'attachment://{photo.file.name}',
+                    },
+                })
+                files.append((photo.file.name, BytesIO(file.read())))
+
+        headers = {
+            'Content-Disposition': 'form-data; name="payload_json"',
+            'Content-Type': 'multipart/form-data',
+        }
+
+        return self._send_media_group(
+            channel_id,
+            files,
+            embeds=embeds,
+            attachments=attachments,
+            headers=headers,
+            **kwargs,
+        )
+
+    def _send_media_group(self, channel_id, files: List[tuple], **kwargs) -> DiscordMessage:
+        return self.bot.send_media_group(channel_id, files, **kwargs)
+
+    def _send_message(self, channel_id: int, post: Post, **kwargs) -> DiscordMessage:
+        return self.bot.send_message(channel_id, escape_discord_message(post.message), **kwargs)
 
     def delete_message(self, channel_id: int, message_id: int, **kwargs) -> dict:
         try:
             self.bot.delete_message(channel_id, message_id)
             status = True
-        except (RequestException, ValueError) as e:
+        except ApiDiscordException:
+            status = False
+        except Exception as e:
             logger.exception(e)
             status = False
 
@@ -82,8 +136,20 @@ class DiscordSender(AbstractSender):
         return self.bot.edit_message(channel_id, message_id, message=message, **kwargs)
 
     def send_message(self, channel_id: int, post: Post, **kwargs):
-        message = escape_discord_message(post.message)
-        return self.bot.send_message(channel_id, message, **kwargs)
+        if post.gallery_documents:
+            pass
+        elif post.gallery_photos:
+            return self._send_gallery_photos(channel_id, post.gallery_photos.all(), **kwargs)
+        else:
+            message = escape_discord_message(post.message or post.caption)
+            if post.document:
+                pass
+                # return self.bot.send_document(channel_id, post.document, caption=message, **kwargs)
+
+            elif post.message:
+                return self.bot.send_message(channel_id, message, **kwargs)
+
+        raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
 
     def get_channel_info(self, channel_id: int) -> DiscordChannel:
         return self.bot.get_channel_info(channel_id)
@@ -94,15 +160,8 @@ class DiscordSender(AbstractSender):
 
 class TelegramSender(AbstractSender):
     def __init__(self, bot: Bot) -> None:
+        super().__init__()
         self.bot = TelegramBot(bot.token)
-
-        self.root = getenv('PROJECT_LOCATION', '')
-        if not self.root:
-            raise Exception('PROJECT_LOCATION not set in system environment')
-
-    def _get_path(self, filename: str) -> str:
-        filename = str(filename)[1:] if str(filename).startswith('/') else path.join('media', str(filename))
-        return path.join(self.root, filename)
 
     def _send_audio(self, channel_id: int, audio: str, *args, **kwargs) -> TelegramMessage:
         with open(self._get_path(audio), mode='rb') as file:
