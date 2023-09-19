@@ -1,5 +1,7 @@
 from json import dumps
 
+from django.db.models.fields.files import ImageFieldFile
+
 from requests import Session
 
 from .exceptions import ApiDiscordException
@@ -42,8 +44,12 @@ class DiscordBot:
             return response.json()
         return {}
 
-    def _send_message(self, channel_id: int, message: str | None = None, **kwargs) -> Message:
-        data = {}
+    def _send_message(
+            self,
+            channel_id: int,
+            message: str | None = None,
+            **kwargs) -> Message:
+        multipart = {}
         payload = {}
 
         if message:
@@ -61,16 +67,20 @@ class DiscordBot:
         if embeds:
             payload.update({'embeds': embeds})  # type: ignore
 
-        files = kwargs.pop('files', None)
+        file = kwargs.pop('file', None)
+        files = [file] if file else kwargs.pop('files', None)
 
-        if embeds and files:
-            data.update({'payload_json': (None, dumps(payload), 'application/json')})
-            payload = None
+        if files:
+            if embeds:
+                multipart.update({'payload_json': (None, dumps(payload), 'application/json')})
+                payload = None
 
-            for index, file in enumerate(files):
-                data.update({f'files[{index}]': file})
+                for index, file in enumerate(files):
+                    multipart.update({f'files[{index}]': file})
+            else:
+                multipart = files
 
-        return Message(self._api(f'/channels/{channel_id}/messages', 'POST', json=payload, files=data))
+        return Message(self._api(f'/channels/{channel_id}/messages', 'POST', data=payload, files=multipart))
 
     def get_me(self) -> User:
         return User(self._api('/users/@me'))
@@ -93,8 +103,11 @@ class DiscordBot:
         }
         return Message(self._api(f'/channels/{channel_id}/messages/{message_id}', 'PATCH', json=json))
 
-    # def send_document(self, channel_id: int, document: BufferedReader, caption: str, **kwargs):
-    #    return self.send_message(channel_id, caption, files=files, **kwargs)
+    def send_document(self, channel_id: int, document: ImageFieldFile, caption: str, **kwargs) -> Message:
+        return self._send_message(channel_id, message=caption, file=(document.name, document), **kwargs)
+
+    def send_photo(self, channel_id: int, photo: ImageFieldFile, caption: str, **kwargs) -> Message:
+        return self._send_message(channel_id, message=caption, file=(photo.name, photo), **kwargs)
 
     def send_message(self, channel_id: int, message: str, **kwargs) -> Message:
         return self._send_message(channel_id, message, **kwargs)

@@ -6,6 +6,7 @@ from os import path
 from os import getenv
 
 from django.db.models import QuerySet
+from django.db.models.fields.files import ImageFieldFile
 from telebot.apihelper import ApiTelegramException
 from telebot.types import Chat as TelegramChat
 from telebot.types import Message as TelegramMessage
@@ -73,9 +74,11 @@ class DiscordSender(AbstractSender):
         super().__init__()
         self.bot = DiscordBot(bot.token)
 
-    # def _send_document(self, channel_id: int, document: str, *args, **kwargs) -> DiscordMessage:
-    #     with open(self._get_path(document), mode='rb') as file:
-    #         return self.bot.send_document(channel_id, file, *args, **kwargs)
+    def _send_document(self, channel_id: int, document: ImageFieldFile, *args, **kwargs) -> DiscordMessage:
+        return self.bot.send_document(channel_id, document, *args, **kwargs)
+
+    def _send_photo(self, channel_id: int, photo: ImageFieldFile, *args, **kwargs) -> DiscordMessage:
+        return self.bot.send_photo(channel_id, photo, *args, **kwargs)
 
     def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> DiscordMessage:  # NOQA: E501
         embeds = []
@@ -143,9 +146,9 @@ class DiscordSender(AbstractSender):
         else:
             message = escape_discord_message(post.message or post.caption)
             if post.document:
-                pass
-                # return self.bot.send_document(channel_id, post.document, caption=message, **kwargs)
-
+                return self._send_document(channel_id, post.document, caption=message, **kwargs)
+            elif post.photo:
+                return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
             elif post.message:
                 return self.bot.send_message(channel_id, message, **kwargs)
 
