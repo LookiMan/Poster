@@ -24,6 +24,7 @@ def delete_message(self, message: PostMessage) -> None:
         task.exception = e
 
     task.save()
+    message.delete()
 
 
 @app.task(name='poster.tasks.delete_post_task', bind=True)
