@@ -16,7 +16,7 @@ from .tasks import delete_message_task
 from .tasks import delete_post_task
 from .tasks import edit_post_task
 from .tasks import send_post_task
-from .utils import download_bot_photo
+from .utils import download_channel_photo
 
 import logging
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ def channel_post_save(sender: Channel, instance: Channel, created: bool, **kwarg
         if sender_api.is_telegram_sender:
             instance.username = info.username
             if info.photo:
-                download_bot_photo(instance, info.photo.small_file_id)
+                download_channel_photo(instance, info.photo.small_file_id)
         else:
             instance.server_id = info.guild_id
     instance.save()
