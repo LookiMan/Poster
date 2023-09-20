@@ -1,6 +1,7 @@
 from json import dumps
 
 from django.db.models.fields.files import ImageFieldFile
+from django.db.models import FileField
 
 from requests import Session
 
@@ -51,6 +52,7 @@ class DiscordBot:
             **kwargs) -> Message:
         multipart = {}
         payload = {}
+        flags = 0
 
         if message:
             payload.update({'content': str(message)})
@@ -61,7 +63,14 @@ class DiscordBot:
 
         disable_notification = kwargs.pop('disable_notification', False)
         if disable_notification:
-            payload.update({'flags': 4096})  # type: ignore
+            flags = 1 << 12  # 4096
+
+        voice_message = kwargs.pop('voice_message', False)
+        if voice_message:
+            flags += 1 << 13  # 8192
+
+        if flags:
+            payload.update({'flags': flags})  # type: ignore
 
         embeds = kwargs.pop('embeds', False)
         if embeds:
@@ -103,7 +112,10 @@ class DiscordBot:
         }
         return Message(self._api(f'/channels/{channel_id}/messages/{message_id}', 'PATCH', json=json))
 
-    def send_document(self, channel_id: int, document: ImageFieldFile, caption: str, **kwargs) -> Message:
+    def send_audio(self, channel_id: int, audio: FileField, caption: str, **kwargs) -> Message:
+        return self._send_message(channel_id, message=caption, file=(audio.name, audio), **kwargs)
+
+    def send_document(self, channel_id: int, document: FileField, caption: str, **kwargs) -> Message:
         return self._send_message(channel_id, message=caption, file=(document.name, document), **kwargs)
 
     def send_photo(self, channel_id: int, photo: ImageFieldFile, caption: str, **kwargs) -> Message:
@@ -114,3 +126,6 @@ class DiscordBot:
 
     def send_media_group(self, channel_id: int, files: list, attachments: list, embeds: list, **kwargs):
         return self._send_message(channel_id, files=files, embeds=embeds, attachments=attachments, **kwargs)
+
+    def send_voice(self, channel_id: int, voice: FileField, *args, **kwargs) -> Message:
+        return self._send_message(channel_id, file=(voice.name, voice), voice_message=True, **kwargs)

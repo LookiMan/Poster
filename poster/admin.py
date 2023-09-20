@@ -105,10 +105,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
     def get_user_fields(self, request, obj=None):
         fields = ['channel_type']
         if obj:
-            if not obj.bot:
-                fields.append('bot')
-
-            fields.append('channel_id')
+            fields.extend(['channel_id', 'bot'])
 
             if obj.is_completed and obj.server_id:
                 fields.append('server_id')
@@ -150,7 +147,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
                 readonly_files.append('channel_type')
 
             if obj.is_completed:
-                readonly_files.extend(['channel_id', 'server_id'])
+                readonly_files.extend(['bot', 'channel_id', 'server_id'])
 
         return (*self.readonly_fields, *readonly_files)
 

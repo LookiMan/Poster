@@ -5,6 +5,7 @@ from io import BytesIO
 from os import path
 from os import getenv
 
+from django.db.models import FileField
 from django.db.models import QuerySet
 from django.db.models.fields.files import ImageFieldFile
 from telebot.apihelper import ApiTelegramException
@@ -74,11 +75,17 @@ class DiscordSender(AbstractSender):
         super().__init__()
         self.bot = DiscordBot(bot.token)
 
-    def _send_document(self, channel_id: int, document: ImageFieldFile, *args, **kwargs) -> DiscordMessage:
+    def _send_audio(self, channel_id: int, audio: FileField, *args, **kwargs) -> DiscordMessage:
+        return self.bot.send_audio(channel_id, audio, *args, **kwargs)
+
+    def _send_document(self, channel_id: int, document: FileField, *args, **kwargs) -> DiscordMessage:
         return self.bot.send_document(channel_id, document, *args, **kwargs)
 
     def _send_photo(self, channel_id: int, photo: ImageFieldFile, *args, **kwargs) -> DiscordMessage:
         return self.bot.send_photo(channel_id, photo, *args, **kwargs)
+
+    def _send_voice(self, channel_id: int, voice: FileField, *args, **kwargs) -> DiscordMessage:
+        return self.bot.send_voice(channel_id, voice, *args, **kwargs)
 
     def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> DiscordMessage:  # NOQA: E501
         embeds = []
@@ -145,12 +152,18 @@ class DiscordSender(AbstractSender):
             return self._send_gallery_photos(channel_id, post.gallery_photos.all(), **kwargs)
         else:
             message = escape_discord_message(post.message or post.caption)
-            if post.document:
+            if post.audio:
+                return self._send_audio(channel_id, post.audio, caption=message, **kwargs)
+            elif post.document:
                 return self._send_document(channel_id, post.document, caption=message, **kwargs)
             elif post.photo:
                 return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
             elif post.message:
                 return self.bot.send_message(channel_id, message, **kwargs)
+            # elif post.video:
+            #    return self._send_video(channel_id, post.video, caption=message, **kwargs)
+            elif post.voice:
+                return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
 
         raise UnknownPostType(f'Unknown post type given from post with id {post.pk}')
 
