@@ -61,7 +61,7 @@ class BotAdminForm(ModelForm):
         except ApiTelegramException:
             raise ValidationError(self.messages.telegram_token_error)
 
-    def clean(self):
+    def clean(self) -> None:
         cleaned_data = super().clean()
         if not self.is_valid():
             return
@@ -98,7 +98,7 @@ class ChannelAdminForm(ModelForm):
         if not TelegramBot(self.bot.token).is_channel_with_id_exists(self.channel_id):
             raise ValidationError(self.messages.channel_id_error)
 
-    def clean(self):
+    def clean(self) -> None:
         cleaned_data = super().clean()
         self.bot = cleaned_data.get('bot')
         self.channel_id = cleaned_data.get('channel_id')
@@ -123,7 +123,7 @@ class PostAdminForm(ModelForm):
             'message': FroalaEditor(),
         }
 
-    def clean(self):
+    def clean(self) -> None:
         cleaned_data = super().clean()
         mime = Magic(mime=True)
 

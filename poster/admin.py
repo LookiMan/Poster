@@ -170,7 +170,7 @@ class ChannelAdmin(AdminImageMixin, ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        if obj and obj.channel_type and form.base_fields.get('bot'):
+        if obj and obj.channel_type and form and form.base_fields.get('bot'):
             form.base_fields['bot'].queryset = Bot.objects.filter(bot_type=obj.channel_type)
         return form
 
