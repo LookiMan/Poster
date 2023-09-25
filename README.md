@@ -15,11 +15,11 @@
 
 **1. Add Telegram or Discord bots:**
 
-To add a new bot you should: go to the Bots tab and click the "Add Bot" button, select the bot type and specify its token obtained from @BotFather (for Telegram) or in the developer panel (for Discord).
+To add a new bot you should: go to the "Bots" tab and click the "Add Bot" button, select the bot type and specify its token obtained from @BotFather (for Telegram) or in the developer panel (for Discord).
 
 **2. Add Telegram or Discord channels:**
 
-To add a new bot you should: go to the Channels tab and click the "Add Channel" button, specify the type of channel (Discord/Telegram), add a previously created bot and specify the channel id
+To add a new channel you should: go to the "Channels" tab and click the "Add Channel" button, specify the type of channel (Discord/Telegram), add a previously created bot and specify the channel id
 
 **3. Create new post:**
 
@@ -39,6 +39,17 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 |         Voice         |       ✅      |      ❌       |
 
 
+**5. Supported action types:**
+
+- Publish post (send messages upon channels)
+- Publish post silently (send messages upon channels without sound notification)
+- Edit post (messages will be edited in channels)
+- Unpublish post (messages will be deleted only from channels, but not from admin panel)
+- Delete post (messages will be deleted from channels and from the admin panel)
+
+![](https://github.com/LookiMan/Poster/blob/main/screenshots/publised_post.png)
+
+![](https://github.com/LookiMan/Poster/blob/main/screenshots/unpublised_post.png)
 
 ## Configuration:
 
