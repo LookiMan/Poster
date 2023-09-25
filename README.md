@@ -1,3 +1,9 @@
+# Poster
+
+### Simple web admin for posting posts to many telegram and discord channels
+
+![](https://github.com/LookiMan/Poster/blob/master/screenshots/posts.png)
+
 
 ## Configuration:
 
@@ -64,3 +70,7 @@
 **Run tests:**
 
 `docker compose exec app python manage.py test`
+
+**Build styles use**
+
+`docker compose exec app sh -c ./bin/build-sass.sh`

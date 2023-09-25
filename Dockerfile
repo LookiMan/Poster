@@ -10,6 +10,8 @@ COPY . .
 
 RUN chmod +x ./bin/entrypoint.sh
 RUN chmod +x ./bin/validate-python.sh
+RUN chmod +x ./bin/build-sass.sh
+RUN chmod +x ./bin/watch-sass.sh
 
 # Configure env
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,6 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-RUN npm install pyright
+RUN npm install -g sass
 
 EXPOSE $PORT

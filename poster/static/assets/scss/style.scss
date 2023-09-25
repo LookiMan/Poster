@@ -1,0 +1,33 @@
+
+.post-content {
+    display: flex;
+
+    .attachment {
+        display: flex;
+        
+        .file {
+            margin-right: 10px;
+            display: block;
+            width: 76px;
+            height: 76px;
+            background-color: #c6c6c6;
+            border: dashed 1px #666;
+
+            img {
+                width: 60px;
+                height: 60px;
+                margin: 8px;
+            }
+        }
+
+        .photo {
+            margin-right: 10px;
+            width: 76px;
+            height: 76px;    
+        }
+    }
+
+    .message {
+        color: #000;
+    }
+}

@@ -21,6 +21,7 @@ from .models import Task
 from .signals import edit_post_signal
 from .signals import publish_post_signal
 from .signals import unpublish_post_signal
+from .utils import prepare_markup
 
 
 class GalleryDocumentInline(TabularInline):
@@ -179,8 +180,8 @@ class PostAdmin(ModelAdmin):
 
     list_display = (
         'post_type',
-        'is_published',
         'post_content',
+        'is_published',
         'post_channels',
         'created_at',
         'updated_at',
@@ -307,29 +308,21 @@ class PostAdmin(ModelAdmin):
 
     def post_content(self, obj):
         if obj.post_type == PostTypeEnum.AUDIO:
-            return mark_safe(
-                f'<strong>{_("Audio")}:</strong> {obj.audio}.<br><strong>{_("Caption")}:</strong> {obj.caption}'
-            )
+            return prepare_markup(message=obj.caption, files=[obj.audio])
         elif obj.post_type == PostTypeEnum.DOCUMENT:
-            return mark_safe(
-                f'<strong>{_("Document")}:</strong> {obj.document}.<br><strong>{_("Caption")}:</strong> {obj.caption}' # NOQA
-            )
+            return prepare_markup(message=obj.caption, files=[obj.document])
+        elif obj.post_type == PostTypeEnum.GALLERY_DOCUMENTS:
+            return prepare_markup(files=obj.gallery_documents.all())
+        elif obj.post_type == PostTypeEnum.GALLERY_PHOTOS:
+            return prepare_markup(files=obj.gallery_photos.all())
         elif obj.post_type == PostTypeEnum.TEXT:
-            return mark_safe(
-                f'<strong>{_("Message")}:</strong> {obj.message}'
-            )
+            return prepare_markup(message=obj.message)
         elif obj.post_type == PostTypeEnum.PHOTO:
-            return mark_safe(
-                f'<strong>{_("Photo")}:</strong> {obj.photo}.<br><strong>{_("Caption")}:</strong> {obj.caption}'
-            )
+            return prepare_markup(message=obj.caption, files=[obj.photo])
         elif obj.post_type == PostTypeEnum.VIDEO:
-            return mark_safe(
-                f'<strong>{_("Video")}:</strong> {obj.video}.<br><strong>{_("Caption")}:</strong> {obj.caption}'
-            )
+            return prepare_markup(message=obj.caption, files=[obj.video])
         elif obj.post_type == PostTypeEnum.VOICE:
-            return mark_safe(
-                f'<strong>{_("Voice")}:</strong> {obj.voice}.<br><strong>{_("Caption")}:</strong> {obj.caption}'
-            )
+            return prepare_markup(message=obj.caption, files=[obj.voice])
 
     post_content.allow_tags = True
     post_content.short_description = _('Post content')
@@ -345,6 +338,11 @@ class PostAdmin(ModelAdmin):
         if form and form.base_fields.get('channels'):
             form.base_fields['channels'].queryset = Channel.objects.filter(is_completed=True)
         return form
+
+    class Media:
+        css = {
+            'all': ('assets/dist/bundle.css',),
+        }
 
 
 @register(Task)

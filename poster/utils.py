@@ -1,6 +1,7 @@
 from os import path
 
 from django.conf import settings
+from django.utils.safestring import mark_safe
 from markdownify import abstract_inline_conversion
 from markdownify import MarkdownConverter
 
@@ -55,3 +56,34 @@ def escape_discord_message(message: str) -> str:
 
 def get_default_channel_image(messenger):
     return path.join('default', f'{messenger}_channel_icon.png')
+
+
+def render_attachments(files: list | None) -> str:
+    html = ''
+
+    if not files:
+        return html
+
+    for file in files:
+        ext = file.name.split('.')[-1] if hasattr(file, 'name') else file.file.name.split('.')[-1]
+        url = file.url if hasattr(file, 'name') else file.file.url
+
+        if ext in ('png', 'jpg', 'jpeg'):
+            html += f'<img class="photo" src="{url}"></img>'
+        else:
+            html += f'<a class="file" href="{url}"><img src="/media/default/download.png"></img></a>'
+
+    return html
+
+
+def prepare_markup(message: str | None = None, files: list | None = None) -> str:
+    return mark_safe(
+        f'''<div class="post-content">
+            <div class="attachment">
+                {render_attachments(files)}
+            </div>
+            <div class="message">
+                {message or ''}
+            </div>
+        </div>'''
+    )
