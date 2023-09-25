@@ -47,9 +47,9 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 - Unpublish post (messages will be deleted only from channels, but not from admin panel)
 - Delete post (messages will be deleted from channels and from the admin panel)
 
-![](https://github.com/LookiMan/Poster/blob/main/screenshots/publised_post.png)
+![](https://github.com/LookiMan/Poster/blob/main/screenshots/published_post.png)
 
-![](https://github.com/LookiMan/Poster/blob/main/screenshots/unpublised_post.png)
+![](https://github.com/LookiMan/Poster/blob/main/screenshots/unpublished_post.png)
 
 ## Configuration:
 
