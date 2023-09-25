@@ -13,7 +13,7 @@ def save_file(name: str, content: bytes) -> None:
 
 
 def download_channel_photo(channel: 'Channel', file_id: str) -> None:  # NOQA: F821 # type: ignore
-    content = TelegramBot(channel.bot).download_file_from_telegram(file_id)
+    content = TelegramBot(channel.bot.token).download_file_from_telegram(file_id)
     if content:
         channel.image.name = file_id
         save_file(file_id, content)
