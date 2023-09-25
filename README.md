@@ -2,7 +2,7 @@
 
 ### Simple web admin for posting posts to many telegram and discord channels
 
-![](https://github.com/LookiMan/Poster/blob/master/screenshots/posts.png)
+![](https://github.com/LookiMan/Poster/blob/main/screenshots/posts.png)
 
 
 ## Configuration:
