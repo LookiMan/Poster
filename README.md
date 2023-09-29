@@ -39,7 +39,7 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 |         Voice         |       ✅      |       ⚠️       |
 
 
-**5. Supported action types:**
+**5. Supported actions:**
 
 - Publish post (send messages upon channels)
 - Publish post silently (send messages upon channels without sound notification)
@@ -50,6 +50,15 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 ![](https://github.com/LookiMan/Poster/blob/main/screenshots/published_post.png)
 
 ![](https://github.com/LookiMan/Poster/blob/main/screenshots/unpublished_post.png)
+
+## TODO:
+
+- Fix sending voice messages in discord
+
+- Finalize the function annotations and type hints
+
+- Finalize the tests :)
+
 
 ## Configuration:
 
