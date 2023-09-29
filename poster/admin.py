@@ -214,6 +214,7 @@ class PostAdmin(ModelAdmin):
             'is_published',
             'created_at',
             'updated_at',
+            'media_gallery_type',
         ]
 
     def get_fieldsets(self, request, obj=None):

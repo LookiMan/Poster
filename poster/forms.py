@@ -114,6 +114,14 @@ class ChannelAdminForm(ModelForm):
 
 class PostAdminForm(ModelForm):
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        if self.instance.is_media_gallery:
+            self.fields['media_gallery_type'].initial = 'document' if self.instance.is_documents_media_gallery else 'photo'  # NOQA: E501
+
+    media_gallery_type = CharField(widget=HiddenInput, required=False)
+
     class Meta:
         model = Post
         fields = '__all__'

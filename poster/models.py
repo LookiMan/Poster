@@ -255,8 +255,16 @@ class Post(BaseMixin, ChannelsMixin):
         return GalleryPhoto.objects.filter(post_id=self.pk)
 
     @property
+    def is_documents_media_gallery(self) -> bool:
+        return self.post_type == PostTypeEnum.GALLERY_DOCUMENTS
+
+    @property
+    def is_photos_media_gallery(self) -> bool:
+        return self.post_type == PostTypeEnum.GALLERY_PHOTOS
+
+    @property
     def is_media_gallery(self) -> bool:
-        return self.post_type in [PostTypeEnum.GALLERY_DOCUMENTS, PostTypeEnum.GALLERY_PHOTOS]
+        return self.is_documents_media_gallery or self.is_photos_media_gallery
 
     def __str__(self) -> str:
         return f'{self.post_type} post with id {self.pk}'
