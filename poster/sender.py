@@ -84,8 +84,35 @@ class DiscordSender(AbstractSender):
     def _send_photo(self, channel_id: int, photo: ImageFieldFile, *args, **kwargs) -> DiscordMessage:
         return self.bot.send_photo(channel_id, photo, *args, **kwargs)
 
+    def _send_video(self, channel_id: int, video: FileField, *args, **kwargs) -> DiscordMessage:
+        return self.bot.send_video(channel_id, video, *args, **kwargs)
+
     def _send_voice(self, channel_id: int, voice: FileField, *args, **kwargs) -> DiscordMessage:
         return self.bot.send_voice(channel_id, voice, *args, **kwargs)
+
+    def _send_gallery_documents(self, channel_id: int, documents: QuerySet[GalleryDocument], *args, **kwargs) -> DiscordMessage:  # NOQA: E501
+        content = []
+        files = []
+        for index, document in enumerate(documents, 1):
+            with open(self._get_path(document.file), mode='rb') as file:
+                if document.caption:
+                    content.append(f'{index}. {escape_discord_message(document.caption)}')
+                files.append((document.file.name, BytesIO(file.read())))
+
+        headers = {
+            'Content-Disposition': 'form-data; name="payload_json"',
+            'Content-Type': 'multipart/form-data',
+        }
+
+        return self._send_media_group(
+            channel_id,
+            files,
+            embeds=None,
+            attachments=None,
+            message='\n'.join(content),
+            headers=headers,
+            **kwargs,
+        )
 
     def _send_gallery_photos(self, channel_id: int, photos: QuerySet[GalleryPhoto], *args, **kwargs) -> DiscordMessage:  # NOQA: E501
         embeds = []
@@ -147,7 +174,7 @@ class DiscordSender(AbstractSender):
 
     def send_message(self, channel_id: int, post: Post, **kwargs):
         if post.gallery_documents:
-            pass
+            return self._send_gallery_documents(channel_id, post.gallery_documents.all(), **kwargs)
         elif post.gallery_photos:
             return self._send_gallery_photos(channel_id, post.gallery_photos.all(), **kwargs)
         else:
@@ -160,8 +187,8 @@ class DiscordSender(AbstractSender):
                 return self._send_photo(channel_id, post.photo, caption=message, **kwargs)
             elif post.message:
                 return self.bot.send_message(channel_id, message, **kwargs)
-            # elif post.video:
-            #    return self._send_video(channel_id, post.video, caption=message, **kwargs)
+            elif post.video:
+                return self._send_video(channel_id, post.video, caption=message, **kwargs)
             elif post.voice:
                 return self._send_voice(channel_id, post.voice, caption=message, **kwargs)
 

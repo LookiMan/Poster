@@ -127,5 +127,8 @@ class DiscordBot:
     def send_media_group(self, channel_id: int, files: list, attachments: list, embeds: list, **kwargs):
         return self._send_message(channel_id, files=files, embeds=embeds, attachments=attachments, **kwargs)
 
-    def send_voice(self, channel_id: int, voice: FileField, *args, **kwargs) -> Message:
+    def send_video(self, channel_id: int, video: FileField, **kwargs) -> Message:
+        return self._send_message(channel_id, file=(video.name, video), **kwargs)
+
+    def send_voice(self, channel_id: int, voice: FileField, **kwargs) -> Message:
         return self._send_message(channel_id, file=(voice.name, voice), voice_message=True, **kwargs)

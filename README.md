@@ -35,8 +35,8 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 |     Gallery Photos    |       ✅      |      ✅       |
 |          Text         |       ✅      |      ✅       |
 |         Photo         |       ✅      |      ✅       |
-|         Video         |       ✅      |      ❌       |
-|         Voice         |       ✅      |      ❌       |
+|         Video         |       ✅      |      ✅       |
+|         Voice         |       ✅      |       ⚠️       |
 
 
 **5. Supported action types:**
@@ -81,6 +81,10 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 
 `docker compose exec app python manage.py compilemessages`
 
+**Build styles:**
+
+`docker compose exec app sh -c ./bin/build-sass.sh`
+
 **Configure pre-commit validation:**
 
 `cp ./bin/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
@@ -117,6 +121,6 @@ To add a new post you should: go to the "Posts" tab and click the "Add Post" but
 
 `docker compose exec app python manage.py test`
 
-**Build styles use**
+**Watch styles:**
 
-`docker compose exec app sh -c ./bin/build-sass.sh`
+`docker compose exec app sh -c ./bin/watch-sass.sh`
